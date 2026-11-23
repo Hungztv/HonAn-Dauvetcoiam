@@ -30,6 +30,7 @@ export const FacelessPassengerCharacter: React.FC<PassengerProps> = ({
   isCulled = false,
   variantIndex = 0,
   isStanding = false,
+  overrideClip = null,
 }) => {
   const rootRef = useRef<THREE.Group | null>(null);
   const torsoRef = useRef<THREE.Group | null>(null);
@@ -60,7 +61,7 @@ export const FacelessPassengerCharacter: React.FC<PassengerProps> = ({
 
     // Smooth vertical stand-up transition from seated boat bench!
     if (rootRef.current) {
-      const targetY = isStanding ? 0 : -0.34;
+      const targetY = isStanding || overrideClip === 'StandUp' ? 0 : -0.34;
       rootRef.current.position.y = THREE.MathUtils.lerp(
         rootRef.current.position.y,
         targetY,
@@ -80,7 +81,7 @@ export const FacelessPassengerCharacter: React.FC<PassengerProps> = ({
       state,
       clockState.clock.elapsedTime,
       delta,
-      { sitting: !isStanding, headLookYaw }
+      { sitting: !isStanding && overrideClip !== 'StandUp', headLookYaw, overrideClip }
     );
   });
 

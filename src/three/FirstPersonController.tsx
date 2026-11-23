@@ -263,36 +263,53 @@ export const FirstPersonController: React.FC<FirstPersonControllerProps> = ({ le
 
     drainFlashlight(delta);
 
-    // Brief smooth Camera Look-At pull toward the physical 3D NPC during first 0.5s of a 3D jumpscare
+    // Brief smooth Camera Look-At pull + FOV impact recoil toward the physical 3D NPC
     // (never locks out player control or corrupts yaw/pitch!)
+    const perspCam = camera as THREE.PerspectiveCamera;
+    const baseFov = 68;
+    let targetFov = baseFov;
+
     if (activePhysicalJumpscare && overlay === 'none') {
       const elapsedSec = (Date.now() - activePhysicalJumpscare.startedAt) / 1000;
-      if (elapsedSec < 0.52) {
+      const pullDuration = activePhysicalJumpscare.jumpscareType === 'A_BEHIND_PLAYER' ? 0.62 : 0.52;
+      if (elapsedSec < pullDuration) {
         const [tx, ty, tz] = activePhysicalJumpscare.lookAtTarget;
         const dx = tx - camera.position.x;
         const dy = ty - camera.position.y;
         const dz = tz - camera.position.z;
         const horiz = Math.hypot(dx, dz) || 0.001;
         const desiredYaw = Math.atan2(-dx, -dz);
-        const desiredPitch = THREE.MathUtils.clamp(Math.atan2(dy, horiz), -0.6, 0.5);
+        const desiredPitch = THREE.MathUtils.clamp(Math.atan2(dy, horiz), -0.68, 0.5);
 
         // Shortest-angle delta lerp
         let diffYaw = desiredYaw - yaw.current;
         while (diffYaw > Math.PI) diffYaw -= Math.PI * 2;
         while (diffYaw < -Math.PI) diffYaw += Math.PI * 2;
 
-        const pull = Math.min(1, delta * 9.5);
+        const pull = Math.min(1, delta * (activePhysicalJumpscare.jumpscareType === 'A_BEHIND_PLAYER' ? 11.5 : 9.5));
         yaw.current += diffYaw * pull;
         pitch.current = THREE.MathUtils.lerp(pitch.current, desiredPitch, pull);
       }
+
+      // Dramatic FOV contraction on scare peak (68° -> 60° -> smooth recovery to 68°)
+      if (elapsedSec < 0.72) {
+        targetFov = settings.cameraShake ? baseFov - 8 : baseFov - 4;
+      }
     }
 
-    // Apply camera orientation (with controlled camera shake during 3D jumpscare if enabled in Settings)
+    if (perspCam.isPerspectiveCamera && Math.abs(perspCam.fov - targetFov) > 0.05) {
+      perspCam.fov = THREE.MathUtils.lerp(perspCam.fov, targetFov, Math.min(1, delta * 12));
+      perspCam.updateProjectionMatrix();
+    }
+
+    // Apply camera orientation (with controlled camera shake + short recoil during 3D jumpscare if enabled)
     camera.rotation.order = 'YXZ';
     if (activePhysicalJumpscare && settings.cameraShake) {
+      const elapsedSec = (Date.now() - activePhysicalJumpscare.startedAt) / 1000;
+      const recoilPitch = elapsedSec < 0.28 ? Math.sin((elapsedSec / 0.28) * Math.PI) * 0.055 : 0;
       const t = state.clock.elapsedTime * 52;
       camera.rotation.y = yaw.current + Math.sin(t) * 0.045;
-      camera.rotation.x = pitch.current + Math.cos(t * 1.3) * 0.038;
+      camera.rotation.x = pitch.current + recoilPitch + Math.cos(t * 1.3) * 0.038;
       camera.rotation.z = Math.sin(t * 0.9) * 0.055;
     } else {
       camera.rotation.y = yaw.current;

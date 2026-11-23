@@ -21,6 +21,7 @@ export const WoodenStatueCharacter: React.FC<StatueCharacterProps> = ({
   headLookYaw = 0,
   isCulled = false,
   isFrozenByGaze = false,
+  overrideClip = null,
 }) => {
   const torsoRef = useRef<THREE.Group | null>(null);
   const headRef = useRef<THREE.Group | null>(null);
@@ -43,8 +44,8 @@ export const WoodenStatueCharacter: React.FC<StatueCharacterProps> = ({
 
   useFrame((clockState, delta) => {
     if (isCulled || opacity < 0.02) return;
-    // Weeping-Angel rule: freeze completely still while player observes it (unless active jumpscare!)
-    if (isFrozenByGaze && state !== 'Jumpscaring') return;
+    // Weeping-Angel rule: freeze completely still while player observes it (unless active jumpscare or debug clip!)
+    if (isFrozenByGaze && state !== 'Jumpscaring' && !overrideClip) return;
 
     updateArticulatedJoints(
       {
@@ -58,7 +59,7 @@ export const WoodenStatueCharacter: React.FC<StatueCharacterProps> = ({
       state,
       clockState.clock.elapsedTime,
       delta,
-      { headLookYaw }
+      { headLookYaw, overrideClip }
     );
   });
 

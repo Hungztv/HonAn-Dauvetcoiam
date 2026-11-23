@@ -1,5 +1,6 @@
 import React from 'react';
 import { NPCCharacterType, NPCState } from './NPCStateMachine';
+import { NPCAnimationClipName } from './NPCAnimationController';
 import { MayCharacter } from '../characters/MayCharacter';
 import { LienCharacter } from '../characters/LienCharacter';
 import { ChildSpiritCharacter } from '../characters/ChildSpiritCharacter';
@@ -18,11 +19,15 @@ interface NPCControllerProps {
   isStanding?: boolean;
   isRowing?: boolean;
   isFriendly?: boolean;
+  overrideClip?: NPCAnimationClipName | null;
+  crawling?: boolean;
+  shieldFace?: boolean;
 }
 
 /**
  * Renders the appropriate full-body articulated 3D NPC character for any NPCCharacterType.
- * Ready to swap to external rigged GLB characters via NPCRegistry.glbUrl without touching AI logic.
+ * Supports v5.0 16-clip animation overrides, floor crawling, flashlight face-shielding,
+ * and seamless swap to external rigged GLB characters via NPCRegistry.glbUrl.
  */
 export const NPCController: React.FC<NPCControllerProps> = ({
   type,
@@ -35,6 +40,9 @@ export const NPCController: React.FC<NPCControllerProps> = ({
   isStanding = false,
   isRowing = false,
   isFriendly = false,
+  overrideClip = null,
+  crawling = false,
+  shieldFace = false,
 }) => {
   switch (type) {
     case 'dao_thi_may':
@@ -45,6 +53,7 @@ export const NPCController: React.FC<NPCControllerProps> = ({
           headLookYaw={headLookYaw}
           isCulled={isCulled}
           isFriendly={isFriendly}
+          overrideClip={overrideClip}
         />
       );
     case 'tran_thi_lien':
@@ -54,6 +63,9 @@ export const NPCController: React.FC<NPCControllerProps> = ({
           opacity={opacity}
           headLookYaw={headLookYaw}
           isCulled={isCulled}
+          overrideClip={overrideClip}
+          crawling={crawling}
+          shieldFace={shieldFace}
         />
       );
     case 'child_spirit':
@@ -63,6 +75,7 @@ export const NPCController: React.FC<NPCControllerProps> = ({
           opacity={opacity}
           headLookYaw={headLookYaw}
           isCulled={isCulled}
+          overrideClip={overrideClip}
         />
       );
     case 'wooden_statue':
@@ -73,6 +86,7 @@ export const NPCController: React.FC<NPCControllerProps> = ({
           headLookYaw={headLookYaw}
           isCulled={isCulled}
           isFrozenByGaze={isFrozenByGaze}
+          overrideClip={overrideClip}
         />
       );
     case 'faceless_passenger':
@@ -84,6 +98,7 @@ export const NPCController: React.FC<NPCControllerProps> = ({
           isCulled={isCulled}
           variantIndex={variantIndex}
           isStanding={isStanding}
+          overrideClip={overrideClip}
         />
       );
     case 'ferryman':
@@ -94,6 +109,7 @@ export const NPCController: React.FC<NPCControllerProps> = ({
           headLookYaw={headLookYaw}
           isCulled={isCulled}
           isRowing={isRowing}
+          overrideClip={overrideClip}
         />
       );
   }

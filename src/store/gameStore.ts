@@ -24,7 +24,8 @@ import {
 } from '../data/narrativePack';
 import { horrorAudio } from '../audio/horrorAudio';
 import { NPCCharacterType } from '../horror/npc/NPCStateMachine';
-import { PhysicalJumpscareEvent } from '../horror/jumpscare/PhysicalJumpscareDirector';
+import { PhysicalJumpscareEvent, JumpscareType } from '../horror/jumpscare/PhysicalJumpscareDirector';
+import { NPCAnimationClipName } from '../horror/npc/NPCAnimationController';
 
 export const SAVE_KEY = 'hon_an_save_v1';
 export const SAVE_SCHEMA_VERSION = 4;
@@ -269,6 +270,9 @@ interface GameState {
     npcType: NPCCharacterType;
     caption: string;
     force?: boolean;
+    jumpscareType?: JumpscareType;
+    animationClip?: NPCAnimationClipName;
+    crawling?: boolean;
   } | null;
   pendingPostInspectScare: {
     npcType: NPCCharacterType;
@@ -322,8 +326,24 @@ interface GameState {
   // Horror Actions (3D Physical NPC Jumpscare Pipeline)
   triggerHorrorEvent: (whisperText: string, glitchStrength?: number, lampToSnuff?: string) => void;
   triggerPhysicalJumpscare: (event: PhysicalJumpscareEvent, force?: boolean) => boolean;
-  requestPhysicalJumpscare: (npcType: NPCCharacterType, caption: string, force?: boolean) => void;
-  consumePendingPhysicalScare: () => { npcType: NPCCharacterType; caption: string; force?: boolean } | null;
+  requestPhysicalJumpscare: (
+    npcType: NPCCharacterType,
+    caption: string,
+    force?: boolean,
+    options?: {
+      jumpscareType?: JumpscareType;
+      animationClip?: NPCAnimationClipName;
+      crawling?: boolean;
+    }
+  ) => void;
+  consumePendingPhysicalScare: () => {
+    npcType: NPCCharacterType;
+    caption: string;
+    force?: boolean;
+    jumpscareType?: JumpscareType;
+    animationClip?: NPCAnimationClipName;
+    crawling?: boolean;
+  } | null;
   queuePostInspectScare: (npcType: NPCCharacterType, caption: string) => void;
   markZoneScareTriggered: (zoneKey: string) => boolean;
   clearJumpscare: () => void;
@@ -996,11 +1016,20 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({ pendingPostInspectScare: { npcType, caption } });
   },
 
-  requestPhysicalJumpscare: (npcType, caption, force = false) => {
+  requestPhysicalJumpscare: (npcType, caption, force = false, options) => {
     const state = get();
     if (!state.settings.enableJumpscares) return;
     if (state.screen !== 'playing' || state.overlay !== 'none') return;
-    set({ pendingPhysicalScareRequest: { npcType, caption, force } });
+    set({
+      pendingPhysicalScareRequest: {
+        npcType,
+        caption,
+        force,
+        jumpscareType: options?.jumpscareType,
+        animationClip: options?.animationClip,
+        crawling: options?.crawling,
+      },
+    });
   },
 
   consumePendingPhysicalScare: () => {

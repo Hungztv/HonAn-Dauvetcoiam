@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import * as THREE from 'three';
 import { LEVELS } from '../data/levels';
 import {
   applyMoralChoice,
@@ -14,10 +15,26 @@ import {
 import { NPC_DEFINITIONS, getLevelNPCBlueprints } from '../horror/npc/NPCRegistry';
 import { npcPool } from '../horror/npc/NPCPooling';
 import { findSafeNPCSpawnPosition, isPointBlockedInLevel } from '../horror/npc/NPCSpawnManager';
-import { buildPhysicalJumpscareEvent } from '../horror/jumpscare/PhysicalJumpscareDirector';
+import {
+  evaluateNPCPerception,
+  hasUnobstructedLineOfSight,
+} from '../horror/npc/NPCPerception';
+import {
+  computeSafeStepToward,
+  pickUnseenStalkingWaypoint,
+} from '../horror/npc/NPCNavigation';
+import {
+  REQUIRED_HUMANOID_BONES,
+  validateNPCModel,
+} from '../horror/npc/NPCModelValidator';
+import { resolveClipFromState } from '../horror/npc/NPCAnimationController';
+import {
+  buildPhysicalJumpscareEvent,
+  getJumpscarePhase,
+} from '../horror/jumpscare/PhysicalJumpscareDirector';
 import { LEVEL_JUMPSCARE_TRIGGERS } from '../horror/jumpscare/JumpscareTriggers';
 
-describe('HỒN ÁN v4.5.2 — 3D NPC System, FSM & Physical Jumpscare Tests', () => {
+describe('HỒN ÁN v5.0 — 3D NPC System, Perception, Navigation, Animation & Physical Jumpscare Tests', () => {
   it('registers all 6 required Vietnamese horror NPCs with realistic heights & safe distances', () => {
     const types = Object.keys(NPC_DEFINITIONS);
     expect(types).toEqual([
@@ -168,5 +185,148 @@ describe('HỒN ÁN v4.5.2 — 3D NPC System, FSM & Physical Jumpscare Tests', (
 
     npcPool.releaseAll();
     expect(npcPool.size()).toBe(0);
+  });
+
+  it('evaluates 3D NPC Perception (LOS wall/door occlusion, FOV, flashlight beam, player noise)', () => {
+    const level1 = LEVELS[0];
+    // Player inside main hall [0, 1.65, 0.5] looking +X toward sealed East Room [5.2, 0, 0.5]
+    // Closed door at x=3.2 blocks LOS!
+    expect(hasUnobstructedLineOfSight(level1, [0, 1.65, 0.5], [5.2, 0, 0.5], [])).toBe(false);
+    // Opening the sealed door restores LOS!
+    expect(
+      hasUnobstructedLineOfSight(level1, [0, 1.65, 0.5], [5.2, 0, 0.5], ['door_l1_sealed'])
+    ).toBe(true);
+
+    // Direct flashlight beam hits NPC in front with open LOS
+    const lit = evaluateNPCPerception({
+      level: level1,
+      npcPos: [0, 0, -1.5],
+      playerPos: [0, 1.65, 2.5],
+      playerForward: [0, 0, -1],
+      flashlightOn: true,
+      isSprinting: true,
+      isCrouching: false,
+      openDoorIds: [],
+    });
+    expect(lit.inFOV).toBe(true);
+    expect(lit.hasLineOfSight).toBe(true);
+    expect(lit.isIlluminatedByFlashlight).toBe(true);
+    expect(lit.playerNoiseLevel).toBe(1.0);
+
+    // Flashlight off -> NOT illuminated
+    const unlit = evaluateNPCPerception({
+      level: level1,
+      npcPos: [0, 0, -1.5],
+      playerPos: [0, 1.65, 2.5],
+      playerForward: [0, 0, -1],
+      flashlightOn: false,
+      isSprinting: false,
+      isCrouching: true,
+      openDoorIds: [],
+    });
+    expect(unlit.isIlluminatedByFlashlight).toBe(false);
+    expect(unlit.playerNoiseLevel).toBeLessThan(0.25);
+  });
+
+  it('navigates safely around walls and picks unseen stalking cover waypoints', () => {
+    const level2 = LEVELS[1];
+    const cover = pickUnseenStalkingWaypoint({
+      level: level2,
+      currentPos: [-5.4, 0, 3.8],
+      playerPos: [0, 1.65, 8],
+      playerForward: [0, 0, -1],
+      openDoorIds: [],
+    });
+    expect(cover).not.toBeNull();
+
+    const step = computeSafeStepToward({
+      level: level2,
+      currentPos: [-5.4, 0, 3.8],
+      targetPos: [-2.0, 0, 3.8],
+      speed: 1.5,
+      delta: 0.25,
+      minStopDistance: 0.4,
+      capsuleRadius: 0.4,
+      openDoorIds: [],
+    });
+    expect(step.moved).toBe(true);
+    expect(step.nextPos[0]).toBeGreaterThan(-5.4);
+  });
+
+  it('validates external Blender GLB SkinnedMesh bone rig & animation clips accurately', () => {
+    // Build a minimal valid SkinnedMesh with all 15 required humanoid bones
+    const root = new THREE.Group();
+    const bones: THREE.Bone[] = REQUIRED_HUMANOID_BONES.map((name) => {
+      const b = new THREE.Bone();
+      b.name = name;
+      return b;
+    });
+    for (let i = 1; i < bones.length; i++) {
+      bones[0].add(bones[i]);
+    }
+    const geo = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+    const mat = new THREE.MeshStandardMaterial();
+    const skinned = new THREE.SkinnedMesh(geo, mat);
+    skinned.add(bones[0]);
+    skinned.bind(new THREE.Skeleton(bones));
+    root.add(skinned);
+
+    const clip = new THREE.AnimationClip('Idle', 1, []);
+    const valid = validateNPCModel(root, [clip]);
+    expect(valid.isValidRig).toBe(true);
+    expect(valid.hasSkinnedMesh).toBe(true);
+    expect(valid.missingBones).toHaveLength(0);
+
+    // Empty group fails validation with all 15 missing bones reported honestly
+    const invalid = validateNPCModel(new THREE.Group(), []);
+    expect(invalid.isValidRig).toBe(false);
+    expect(invalid.missingBones.length).toBe(REQUIRED_HUMANOID_BONES.length);
+  });
+
+  it('resolves all 16 NPC animation clips and plans Physical Jumpscare Types A–H & phases', () => {
+    expect(resolveClipFromState('Observing')).toBe('SlowHeadRaise');
+    expect(resolveClipFromState('Retreating', { shieldFace: true })).toBe('ShieldFace');
+    expect(resolveClipFromState('Approaching', { crawling: true })).toBe('Crawling');
+    expect(resolveClipFromState('Idle', { rowing: true })).toBe('Rowing');
+    expect(resolveClipFromState('Idle', { overrideClip: 'WaterRise' })).toBe('WaterRise');
+
+    const level1 = LEVELS[0];
+    // Crawling jumpscare lowers eye target near floor (~0.62m)
+    const crawlEv = buildPhysicalJumpscareEvent({
+      level: level1,
+      npcType: 'tran_thi_lien',
+      jumpscareType: 'D_SURFACE_REVEAL',
+      caption: 'Crawl Test',
+      playerPos: [0, 1.65, 2.5],
+      playerForward: [0, 0, -1],
+      openDoorIds: [],
+      animationClip: 'Crawling',
+      crawling: true,
+      durationMs: 1000,
+    });
+    expect(crawlEv).not.toBeNull();
+    expect(crawlEv!.jumpscareType).toBe('D_SURFACE_REVEAL');
+    expect(crawlEv!.lookAtTarget[1]).toBeLessThan(0.8);
+
+    // Multi-stage jumpscare phases progress cleanly from PREPARE -> LUNGE -> COOLDOWN
+    expect(getJumpscarePhase(crawlEv!, crawlEv!.startedAt + 10)).toBe('PREPARE');
+    expect(getJumpscarePhase(crawlEv!, crawlEv!.startedAt + 150)).toBe('SPAWN');
+    expect(getJumpscarePhase(crawlEv!, crawlEv!.startedAt + 350)).toBe('HOLD');
+    expect(getJumpscarePhase(crawlEv!, crawlEv!.startedAt + 600)).toBe('LUNGE');
+    expect(getJumpscarePhase(crawlEv!, crawlEv!.startedAt + 900)).toBe('VANISH');
+    expect(getJumpscarePhase(crawlEv!, crawlEv!.startedAt + 1100)).toBe('COOLDOWN');
+
+    // Type A_BEHIND_PLAYER spawns behind player
+    const behindEv = buildPhysicalJumpscareEvent({
+      level: LEVELS[1],
+      npcType: 'dao_thi_may',
+      jumpscareType: 'A_BEHIND_PLAYER',
+      caption: 'Behind Test',
+      playerPos: [0, 1.65, 2.0],
+      playerForward: [0, 0, -1],
+      openDoorIds: [],
+    });
+    expect(behindEv).not.toBeNull();
+    expect(behindEv!.worldPosition[2]).toBeGreaterThan(2.0);
   });
 });

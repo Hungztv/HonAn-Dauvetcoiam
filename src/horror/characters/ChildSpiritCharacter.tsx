@@ -16,6 +16,7 @@ export const ChildSpiritCharacter: React.FC<CharacterProps> = ({
   opacity = 1,
   headLookYaw = 0,
   isCulled = false,
+  overrideClip = null,
 }) => {
   const rootRef = useRef<THREE.Group | null>(null);
   const torsoRef = useRef<THREE.Group | null>(null);
@@ -46,7 +47,7 @@ export const ChildSpiritCharacter: React.FC<CharacterProps> = ({
     // Slow eerie vertical emergence / floating over the well water
     if (rootRef.current) {
       const targetY =
-        state === 'Jumpscaring' || state === 'Approaching'
+        overrideClip === 'WaterRise' || state === 'Jumpscaring' || state === 'Approaching'
           ? 0.65 + Math.sin(t * 2.4) * 0.04
           : state === 'Observing'
           ? 0.28 + Math.sin(t * 1.4) * 0.06
@@ -70,7 +71,7 @@ export const ChildSpiritCharacter: React.FC<CharacterProps> = ({
       state,
       t,
       delta,
-      { headLookYaw }
+      { headLookYaw, overrideClip: overrideClip ?? (state === 'Approaching' ? 'WaterRise' : null) }
     );
   });
 

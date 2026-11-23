@@ -5,20 +5,26 @@ import { CharacterProps } from './MayCharacter';
 import { updateArticulatedJoints } from '../npc/NPCAnimationController';
 
 /**
- * NPC 02 — TRẦN THỊ LIÊN (1988, Màn 1 & Màn 5)
- * Full-body articulated woman in weathered dark rural clothes, tangled disheveled hair,
- * pale anguished face, tilted head/limp gait, outstretched trembling hands.
+ * NPC 02 — TRẦN THỊ LIÊN (1988, Màn 1 & Màn 5 — v5.0 Full 15-Joint Rig)
+ * Supports low floor Crawling, ShieldFace when hit by flashlight, LimpWalk,
+ * and sudden reaching hand lunge toward camera!
  */
 export const LienCharacter: React.FC<CharacterProps> = ({
   state,
   opacity = 1,
   headLookYaw = 0,
   isCulled = false,
+  overrideClip = null,
+  crawling = false,
+  shieldFace = false,
 }) => {
+  const hipsRef = useRef<THREE.Group | null>(null);
   const torsoRef = useRef<THREE.Group | null>(null);
   const headRef = useRef<THREE.Group | null>(null);
   const leftArmRef = useRef<THREE.Group | null>(null);
   const rightArmRef = useRef<THREE.Group | null>(null);
+  const leftForeArmRef = useRef<THREE.Group | null>(null);
+  const rightForeArmRef = useRef<THREE.Group | null>(null);
   const leftLegRef = useRef<THREE.Group | null>(null);
   const rightLegRef = useRef<THREE.Group | null>(null);
   const hairRef = useRef<THREE.Group | null>(null);
@@ -43,10 +49,13 @@ export const LienCharacter: React.FC<CharacterProps> = ({
 
     updateArticulatedJoints(
       {
+        hips: hipsRef.current,
         torso: torsoRef.current,
         head: headRef.current,
         leftArm: leftArmRef.current,
         rightArm: rightArmRef.current,
+        leftForeArm: leftForeArmRef.current,
+        rightForeArm: rightForeArmRef.current,
         leftLeg: leftLegRef.current,
         rightLeg: rightLegRef.current,
         hair: hairRef.current,
@@ -54,41 +63,38 @@ export const LienCharacter: React.FC<CharacterProps> = ({
       state,
       clockState.clock.elapsedTime,
       delta,
-      { limp: true, headLookYaw }
+      { overrideClip, limp: true, crawling, shieldFace, headLookYaw }
     );
   });
 
   return (
-    <group>
-      {/* Legs & Bare Feet */}
-      <group ref={leftLegRef} position={[-0.095, 0.76, 0]}>
+    <group ref={hipsRef} name="Hips">
+      <group ref={leftLegRef} name="LeftLeg" position={[-0.095, 0.76, 0]}>
         <mesh position={[0, -0.34, 0]} material={mats.pants} castShadow>
           <cylinderGeometry args={[0.072, 0.08, 0.68, 8]} />
         </mesh>
-        <mesh position={[0, -0.72, 0.035]} material={mats.skin}>
+        <mesh name="LeftFoot" position={[0, -0.72, 0.035]} material={mats.skin}>
           <boxGeometry args={[0.075, 0.05, 0.16]} />
         </mesh>
       </group>
-      <group ref={rightLegRef} position={[0.095, 0.76, 0]}>
+      <group ref={rightLegRef} name="RightLeg" position={[0.095, 0.76, 0]}>
         <mesh position={[0, -0.34, 0]} material={mats.pants} castShadow>
           <cylinderGeometry args={[0.072, 0.08, 0.68, 8]} />
         </mesh>
-        <mesh position={[0, -0.72, 0.035]} material={mats.skin}>
+        <mesh name="RightFoot" position={[0, -0.72, 0.035]} material={mats.skin}>
           <boxGeometry args={[0.075, 0.05, 0.16]} />
         </mesh>
       </group>
 
-      {/* Hunched Torso in Old Rural Áo Bà Ba */}
-      <group ref={torsoRef} position={[0, 0.8, 0]}>
-        <mesh position={[0, 0.25, 0]} material={mats.tunic} castShadow>
-          <cylinderGeometry args={[0.155, 0.145, 0.54, 12]} />
+      <group ref={torsoRef} name="Spine" position={[0, 0.8, 0]}>
+        <mesh name="Chest" position={[0, 0.25, 0]} material={mats.tunic} castShadow>
+          <cylinderGeometry args={[0.15, 0.14, 0.54, 12]} />
         </mesh>
         <mesh position={[0, -0.04, 0]} material={mats.tunic}>
           <cylinderGeometry args={[0.15, 0.18, 0.22, 12]} />
         </mesh>
 
-        {/* Head with unnatural tilted neck & tangled hair */}
-        <group ref={headRef} position={[0, 0.6, 0.02]}>
+        <group ref={headRef} name="Head" position={[0, 0.6, 0.02]}>
           <mesh position={[0, 0.1, 0]} material={mats.skin} castShadow>
             <sphereGeometry args={[0.115, 14, 14]} />
           </mesh>
@@ -101,7 +107,6 @@ export const LienCharacter: React.FC<CharacterProps> = ({
           <mesh position={[0, 0.042, 0.098]} material={mats.hollow}>
             <sphereGeometry args={[0.025, 8, 8]} />
           </mesh>
-          {/* Tangled unkempt hair covering partial face */}
           <group ref={hairRef} position={[0, 0.13, -0.02]}>
             <mesh material={mats.hair}>
               <sphereGeometry args={[0.128, 12, 12, 0, Math.PI * 2, 0, Math.PI * 0.65]} />
@@ -118,22 +123,34 @@ export const LienCharacter: React.FC<CharacterProps> = ({
           </group>
         </group>
 
-        {/* Reaching Articulated Arms */}
-        <group ref={leftArmRef} position={[-0.2, 0.45, 0]}>
-          <mesh position={[0, -0.25, 0]} material={mats.tunic} castShadow>
-            <cylinderGeometry args={[0.045, 0.05, 0.5, 8]} />
+        {/* Gaunt Articulated Left Arm -> Forearm -> Long Reaching Hand */}
+        <group ref={leftArmRef} name="LeftArm" position={[-0.19, 0.45, 0]}>
+          <mesh position={[0, -0.14, 0]} material={mats.tunic} castShadow>
+            <cylinderGeometry args={[0.042, 0.044, 0.29, 8]} />
           </mesh>
-          <mesh position={[0, -0.56, 0.02]} material={mats.skin}>
-            <boxGeometry args={[0.06, 0.14, 0.035]} />
-          </mesh>
+          <group ref={leftForeArmRef} name="LeftForeArm" position={[0, -0.28, 0]}>
+            <mesh position={[0, -0.14, 0]} material={mats.tunic} castShadow>
+              <cylinderGeometry args={[0.038, 0.042, 0.28, 8]} />
+            </mesh>
+            <mesh name="LeftHand" position={[0, -0.32, 0.02]} material={mats.skin}>
+              <boxGeometry args={[0.056, 0.15, 0.032]} />
+            </mesh>
+          </group>
         </group>
-        <group ref={rightArmRef} position={[0.2, 0.45, 0]}>
-          <mesh position={[0, -0.25, 0]} material={mats.tunic} castShadow>
-            <cylinderGeometry args={[0.045, 0.05, 0.5, 8]} />
+
+        {/* Gaunt Articulated Right Arm -> Forearm -> Long Reaching Hand */}
+        <group ref={rightArmRef} name="RightArm" position={[0.19, 0.45, 0]}>
+          <mesh position={[0, -0.14, 0]} material={mats.tunic} castShadow>
+            <cylinderGeometry args={[0.042, 0.044, 0.29, 8]} />
           </mesh>
-          <mesh position={[0, -0.56, 0.02]} material={mats.skin}>
-            <boxGeometry args={[0.06, 0.14, 0.035]} />
-          </mesh>
+          <group ref={rightForeArmRef} name="RightForeArm" position={[0, -0.28, 0]}>
+            <mesh position={[0, -0.14, 0]} material={mats.tunic} castShadow>
+              <cylinderGeometry args={[0.038, 0.042, 0.28, 8]} />
+            </mesh>
+            <mesh name="RightHand" position={[0, -0.32, 0.02]} material={mats.skin}>
+              <boxGeometry args={[0.056, 0.15, 0.032]} />
+            </mesh>
+          </group>
         </group>
       </group>
     </group>

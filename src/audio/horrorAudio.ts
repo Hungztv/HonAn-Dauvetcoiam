@@ -713,6 +713,125 @@ class HorrorAudioEngine {
     noise.start(now, 0.2, 0.72);
   }
 
+  /** 3D Positional fingernail/wood wall scratching (Trần Thị Liên — Level 1) */
+  public playWallScratching(pos: Vec3) {
+    this.init();
+    if (!this.ctx || !this.noiseBuffer) return;
+    const now = this.ctx.currentTime;
+    const dest = this.createPanner(pos, 'sfx');
+    for (let i = 0; i < 3; i++) {
+      const t = now + i * 0.16;
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = this.noiseBuffer;
+      const bp = this.ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.setValueAtTime(1800 + i * 240, t);
+      bp.frequency.exponentialRampToValueAtTime(750, t + 0.14);
+      bp.Q.value = 5.5;
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.001, t);
+      g.gain.linearRampToValueAtTime(0.18, t + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+      noise.connect(bp);
+      bp.connect(g);
+      g.connect(dest);
+      noise.start(t, Math.random() * 1.1, 0.16);
+    }
+  }
+
+  /** 3D Positional dark well water bubbling (Hồn Đứa Trẻ — Level 3) */
+  public playWaterBubble(pos: Vec3) {
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const dest = this.createPanner(pos, 'sfx');
+    for (let i = 0; i < 4; i++) {
+      const t = now + i * 0.12 + Math.random() * 0.04;
+      const osc = this.ctx.createOscillator();
+      osc.type = 'sine';
+      const baseFreq = 260 + Math.random() * 180;
+      osc.frequency.setValueAtTime(baseFreq, t);
+      osc.frequency.exponentialRampToValueAtTime(baseFreq * 2.1, t + 0.09);
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.001, t);
+      g.gain.linearRampToValueAtTime(0.14, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+      osc.connect(g);
+      g.connect(dest);
+      osc.start(t);
+      osc.stop(t + 0.11);
+    }
+  }
+
+  /** 3D Positional heavy lacquered wooden statue impact (4 Tượng Quan Gỗ — Level 4) */
+  public playHeavyWoodImpact(pos: Vec3) {
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const dest = this.createPanner(pos, 'sfx');
+    const osc = this.ctx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(118, now);
+    osc.frequency.exponentialRampToValueAtTime(36, now + 0.24);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.42, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+    osc.connect(g);
+    g.connect(dest);
+    osc.start(now);
+    osc.stop(now + 0.3);
+    this.playWoodCreak(pos);
+  }
+
+  /** 3D Positional layered faceless passenger murmur (4 Hành Khách — Level 5) */
+  public playCollectiveWhisper(pos: Vec3) {
+    this.init();
+    if (!this.ctx || !this.noiseBuffer) return;
+    const now = this.ctx.currentTime;
+    const dest = this.createPanner(pos, 'sfx');
+    [480, 740, 1080].forEach((freq, idx) => {
+      if (!this.ctx || !this.noiseBuffer) return;
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = this.noiseBuffer;
+      const bp = this.ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.setValueAtTime(freq, now + idx * 0.08);
+      bp.Q.value = 6.0;
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.001, now + idx * 0.08);
+      g.gain.linearRampToValueAtTime(0.11, now + idx * 0.08 + 0.28);
+      g.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 1.0);
+      noise.connect(bp);
+      bp.connect(g);
+      g.connect(dest);
+      noise.start(now + idx * 0.08, idx * 0.4, 1.05);
+    });
+  }
+
+  /** 3D Positional wooden oar paddling water (Ông Lão Lái Đò — Level 5) */
+  public playPaddleWater(pos: Vec3) {
+    this.init();
+    if (!this.ctx || !this.noiseBuffer) return;
+    const now = this.ctx.currentTime;
+    const dest = this.createPanner(pos, 'sfx');
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = this.noiseBuffer;
+    const lp = this.ctx.createBiquadFilter();
+    lp.type = 'bandpass';
+    lp.frequency.setValueAtTime(420, now);
+    lp.frequency.linearRampToValueAtTime(860, now + 0.25);
+    lp.frequency.exponentialRampToValueAtTime(280, now + 0.72);
+    lp.Q.value = 1.4;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.16, now + 0.22);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+    noise.connect(lp);
+    lp.connect(g);
+    g.connect(dest);
+    noise.start(now, Math.random() * 1.1, 0.78);
+  }
+
   public playHeartbeat(beats = 4, delaySec = 0) {
     if (!this.ctx || !this.masterGain) return;
     const base = this.ctx.currentTime + delaySec;

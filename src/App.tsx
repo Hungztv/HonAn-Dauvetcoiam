@@ -16,6 +16,7 @@ import { InventoryModal } from './components/InventoryModal';
 import { PuzzleModal } from './components/PuzzleModal';
 import { PauseMenu } from './components/PauseMenu';
 import { JumpscareOverlay } from './components/JumpscareOverlay';
+import { NPCDebugPanel } from './horror/debug/NPCDebugPanel';
 import { ChapterIntro, LevelCompleteModal, GrandEndingScreen } from './components/StoryScreens';
 import { horrorAudio } from './audio/horrorAudio';
 
@@ -101,6 +102,9 @@ export function App() {
 
       {/* Cinematic Horror Jumpscare Overlay */}
       <JumpscareOverlay />
+
+      {/* Developer-only 3D NPC & Jumpscare Inspector (DEV / ?debug=1, toggle F9) */}
+      <NPCDebugPanel />
 
       {/* Active Interactive Overlays */}
       <AnimatePresence>

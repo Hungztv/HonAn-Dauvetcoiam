@@ -19,6 +19,7 @@ export const FerrymanCharacter: React.FC<FerrymanProps> = ({
   headLookYaw = 0,
   isCulled = false,
   isRowing = false,
+  overrideClip = null,
 }) => {
   const torsoRef = useRef<THREE.Group | null>(null);
   const headRef = useRef<THREE.Group | null>(null);
@@ -59,7 +60,7 @@ export const FerrymanCharacter: React.FC<FerrymanProps> = ({
       state,
       clockState.clock.elapsedTime,
       delta,
-      { rowing: isRowing && state !== 'Jumpscaring', headLookYaw }
+      { rowing: isRowing && state !== 'Jumpscaring', headLookYaw, overrideClip }
     );
   });
 
