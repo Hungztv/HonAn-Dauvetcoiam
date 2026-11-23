@@ -50,14 +50,58 @@ export class RiggedGLBAnimator {
   public root: THREE.Object3D;
   public mixer: THREE.AnimationMixer;
   public validation: NPCModelValidationReport;
+  public currentClipName: string | null = null;
+  public isPaused = false;
   private actions = new Map<string, THREE.AnimationAction>();
   private currentAction: THREE.AnimationAction | null = null;
+  private clonedMaterials: THREE.Material[] = [];
+  private hipsBone: THREE.Object3D | null = null;
+  private baseHipsXZ: [number, number] = [0, 0];
 
-  constructor(sourceScene: THREE.Object3D, clips: THREE.AnimationClip[], expectedClips: string[] = []) {
+  constructor(
+    sourceScene: THREE.Object3D,
+    clips: THREE.AnimationClip[],
+    expectedClips: string[] = [],
+    expectedHeightMeters?: number
+  ) {
     this.root = cloneSkinned(sourceScene);
-    this.validation = validateNPCModel(this.root, clips, expectedClips);
+    this.validation = validateNPCModel(this.root, clips, {
+      expectedClips,
+      expectedHeightMeters,
+      requireRigged: true,
+    });
+
+    // Clone materials per-instance so opacity/dissolve fades never mutate shared cached materials!
+    this.root.traverse((obj) => {
+      const mesh = obj as THREE.Mesh;
+      if (mesh.isMesh && mesh.material) {
+        if (Array.isArray(mesh.material)) {
+          mesh.material = mesh.material.map((m) => {
+            const c = m.clone();
+            this.clonedMaterials.push(c);
+            return c;
+          });
+        } else {
+          const c = mesh.material.clone();
+          mesh.material = c;
+          this.clonedMaterials.push(c);
+        }
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+      }
+    });
+
+    const hipsName = this.validation.boneMapping.Hips;
+    if (hipsName) {
+      this.hipsBone = this.root.getObjectByName(hipsName) ?? null;
+      if (this.hipsBone) {
+        this.baseHipsXZ = [this.hipsBone.position.x, this.hipsBone.position.z];
+      }
+    }
+
     this.mixer = new THREE.AnimationMixer(this.root);
     for (const clip of clips) {
+      if (clip.duration <= 0) continue;
       const action = this.mixer.clipAction(clip);
       this.actions.set(clip.name.toLowerCase(), action);
     }
@@ -69,36 +113,79 @@ export class RiggedGLBAnimator {
       this.actions.get('idle') ??
       this.actions.values().next().value;
     if (!next) return false;
-    if (next === this.currentAction) return true;
+    this.isPaused = false;
+    if (next === this.currentAction && next.isRunning()) return true;
 
     next.reset();
     next.setLoop(loopOnce ? THREE.LoopOnce : THREE.LoopRepeat, loopOnce ? 1 : Infinity);
     next.clampWhenFinished = loopOnce;
     next.play();
-    if (this.currentAction) {
+    if (this.currentAction && this.currentAction !== next) {
       this.currentAction.crossFadeTo(next, duration, true);
     }
     this.currentAction = next;
+    this.currentClipName = next.getClip().name;
     return true;
   }
 
-  public update(delta: number) {
-    this.mixer.update(delta);
+  public stop() {
+    this.isPaused = true;
+    this.mixer.stopAllAction();
+    this.currentAction = null;
   }
 
+  public reset() {
+    this.isPaused = false;
+    if (this.currentAction) {
+      this.currentAction.reset().play();
+    } else {
+      this.crossfadeTo('Idle', 0.15);
+    }
+  }
+
+  public getTime(): number {
+    return this.currentAction ? this.currentAction.time : this.mixer.time;
+  }
+
+  /** Applies smooth ghost fade/dissolve opacity to cloned instance materials only */
+  public applyOpacity(opacity: number) {
+    const op = Math.max(0, Math.min(1, opacity));
+    for (const mat of this.clonedMaterials) {
+      mat.transparent = op < 0.99;
+      mat.opacity = op;
+    }
+  }
+
+  public update(delta: number, enforceInPlace = true) {
+    if (this.isPaused) return;
+    this.mixer.update(delta);
+    // Keep horizontal root motion in-place so NPCNavigation owns world XZ position with zero sliding
+    if (enforceInPlace && this.hipsBone) {
+      this.hipsBone.position.x = this.baseHipsXZ[0];
+      this.hipsBone.position.z = this.baseHipsXZ[1];
+    }
+  }
+
+  /** Cleanly stops mixer & disposes ONLY per-instance cloned materials (never touches shared cached geometries/textures!) */
   public dispose() {
     this.mixer.stopAllAction();
     this.mixer.uncacheRoot(this.root);
+    for (const mat of this.clonedMaterials) {
+      mat.dispose();
+    }
+    this.clonedMaterials = [];
+    this.currentAction = null;
   }
 }
 
 export async function loadRiggedCharacterGLB(
   url: string,
   expectedClips: string[] = [],
-  renderer?: THREE.WebGLRenderer
+  renderer?: THREE.WebGLRenderer,
+  expectedHeightMeters?: number
 ): Promise<RiggedGLBAnimator> {
   const entry = await assetPipeline.loadModel(url, renderer);
-  return new RiggedGLBAnimator(entry.gltf.scene, entry.gltf.animations, expectedClips);
+  return new RiggedGLBAnimator(entry.gltf.scene, entry.gltf.animations, expectedClips, expectedHeightMeters);
 }
 
 /** Maps an NPC FSM state to a sensible default animation clip name */

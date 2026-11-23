@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { LevelData, Vec3 } from '../../types/game';
 import { useGameStore } from '../../store/gameStore';
-import { getLevelNPCBlueprints, NPCSpawnBlueprint } from './NPCRegistry';
+import { getLevelNPCBlueprints, NPC_DEFINITIONS, NPCSpawnBlueprint } from './NPCRegistry';
 import { NPCState, distanceXZ } from './NPCStateMachine';
 import { evaluateNPCPerception } from './NPCPerception';
 import {
@@ -75,6 +75,10 @@ const WorldNPCActor: React.FC<{
   const [renderOpacity, setRenderOpacity] = useState(blueprint.initialState === 'Hidden' ? 0 : 1);
   const [isCulled, setIsCulled] = useState(false);
   const [headYaw, setHeadYaw] = useState(0);
+  const [preferredModelMode, setPreferredModelMode] = useState<'AUTO' | 'PROCEDURAL' | 'GLB'>('AUTO');
+  const [reloadToken, setReloadToken] = useState(0);
+  const [animationPaused, setAnimationPaused] = useState(false);
+  const [animationResetToken, setAnimationResetToken] = useState(0);
 
   const camDir = useMemo(() => new THREE.Vector3(), []);
 
@@ -107,6 +111,8 @@ const WorldNPCActor: React.FC<{
           setOverrideClip(null);
           setIsCrawling(false);
           setIsShieldingFace(false);
+          setPreferredModelMode('AUTO');
+          setAnimationPaused(false);
         } else {
           if (debugCmd.forceState) {
             vanishedCooldownRef.current = 0;
@@ -118,6 +124,7 @@ const WorldNPCActor: React.FC<{
             vanishedCooldownRef.current = 0;
             opacityRef.current = 1;
             setRenderOpacity(1);
+            setAnimationPaused(false);
             setOverrideClip(debugCmd.forceClip);
           }
           if (debugCmd.forceCrawling !== undefined) {
@@ -125,6 +132,20 @@ const WorldNPCActor: React.FC<{
           }
           if (debugCmd.forceShieldFace !== undefined) {
             setIsShieldingFace(debugCmd.forceShieldFace);
+          }
+          if (debugCmd.preferredModelMode) {
+            setPreferredModelMode(debugCmd.preferredModelMode);
+          }
+          if (debugCmd.reloadGlb || debugCmd.validateNow) {
+            setReloadToken((n) => n + 1);
+          }
+          if (debugCmd.stopAnimation !== undefined) {
+            setAnimationPaused(debugCmd.stopAnimation);
+          }
+          if (debugCmd.resetAnimation) {
+            setAnimationPaused(false);
+            setOverrideClip(null);
+            setAnimationResetToken((n) => n + 1);
           }
           if (debugCmd.relocateToPlayerFront) {
             const frontPos = findSafeNPCSpawnPosition(level, playerPos, playerFwd, 2.35, true, openDoorIds);
@@ -171,6 +192,8 @@ const WorldNPCActor: React.FC<{
     });
 
     if (npcDebugBus.enabled) {
+      const def = NPC_DEFINITIONS[blueprint.type];
+      const runtime = npcDebugBus.getModelRuntime(blueprint.id);
       npcDebugBus.reportSnapshot({
         id: blueprint.id,
         type: blueprint.type,
@@ -184,6 +207,17 @@ const WorldNPCActor: React.FC<{
         opacity: opacityRef.current,
         visible: groupRef.current.visible,
         cooldownSec: Math.max(0, vanishedCooldownRef.current),
+        modelSource: runtime?.modelSource ?? 'PROCEDURAL',
+        glbLoaded: runtime?.glbLoaded ?? false,
+        validationStatus: runtime?.validationStatus ?? 'NONE',
+        skeletonSummary: runtime?.skeletonSummary ?? '15/15 Procedural Rig',
+        mixerTime: runtime?.mixerTime ?? 0,
+        lodLevel: runtime?.lodLevel ?? 'HIGH',
+        boundingHeight: runtime?.boundingHeight ?? def.heightMeters,
+        textureState: runtime?.textureState ?? 'PROCEDURAL_PBR',
+        fallbackReason:
+          runtime?.fallbackReason ??
+          `Chưa có file GLB tại ${def.assetContract.expectedGlbPath} (dùng Procedural 15 khớp)`,
       });
     }
 
@@ -395,6 +429,7 @@ const WorldNPCActor: React.FC<{
   return (
     <group ref={groupRef} position={blueprint.position} rotation={[0, blueprint.rotationY, 0]}>
       <NPCController
+        instanceId={blueprint.id}
         type={blueprint.type}
         state={npcState}
         opacity={renderOpacity}
@@ -408,6 +443,10 @@ const WorldNPCActor: React.FC<{
         overrideClip={overrideClip}
         crawling={isCrawling}
         shieldFace={isShieldingFace}
+        preferredModelMode={preferredModelMode}
+        reloadToken={reloadToken}
+        animationPaused={animationPaused}
+        animationResetToken={animationResetToken}
       />
     </group>
   );

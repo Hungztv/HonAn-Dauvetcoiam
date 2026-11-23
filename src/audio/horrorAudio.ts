@@ -14,6 +14,9 @@ class HorrorAudioEngine {
   private paused = false;
   private initialized = false;
   private activeTheme: string | null = null;
+  /** v5.1 Cache for optional real recorded AudioBuffer files under public/audio/npcs/ */
+  private externalBufferCache = new Map<string, AudioBuffer>();
+  private failedAudioUrls = new Set<string>();
 
   public init() {
     if (typeof window === 'undefined') return;
@@ -830,6 +833,78 @@ class HorrorAudioEngine {
     lp.connect(g);
     g.connect(dest);
     noise.start(now, Math.random() * 1.1, 0.78);
+  }
+
+  /**
+   * HỒN ÁN v5.1 — Loads & caches an optional real recorded audio file (.ogg/.mp3/.wav) into AudioBuffer.
+   * Never crashes when file is missing; caches failed URLs to avoid repeated 404 requests.
+   */
+  public async loadExternalAudioBuffer(url: string): Promise<AudioBuffer | null> {
+    this.init();
+    if (!this.ctx) return null;
+    if (this.failedAudioUrls.has(url)) return null;
+    const cached = this.externalBufferCache.get(url);
+    if (cached) return cached;
+
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) {
+        this.failedAudioUrls.add(url);
+        return null;
+      }
+      const arr = await resp.arrayBuffer();
+      const decoded = await this.ctx.decodeAudioData(arr);
+      this.externalBufferCache.set(url, decoded);
+      return decoded;
+    } catch {
+      this.failedAudioUrls.add(url);
+      return null;
+    }
+  }
+
+  /**
+   * Plays a preloaded/external AudioBuffer through the 3D HRTF PannerNode at exact NPC world coordinates.
+   * If the external file is disabled, unavailable, or fails decode, runs proceduralFallback immediately.
+   */
+  public playSpatialBufferOrFallback(
+    url: string | null | undefined,
+    pos: Vec3,
+    proceduralFallback: () => void,
+    gainLevel = 0.85
+  ): boolean {
+    if (!url || this.failedAudioUrls.has(url)) {
+      proceduralFallback();
+      return false;
+    }
+    this.init();
+    if (!this.ctx) {
+      proceduralFallback();
+      return false;
+    }
+    const cached = this.externalBufferCache.get(url);
+    if (cached) {
+      const dest = this.createPanner(pos, 'sfx');
+      const src = this.ctx.createBufferSource();
+      src.buffer = cached;
+      const gain = this.ctx.createGain();
+      gain.gain.value = gainLevel;
+      src.connect(gain);
+      gain.connect(dest);
+      src.start();
+      return true;
+    }
+
+    // Trigger async load for next playback & use procedural fallback right now so there is zero audio delay
+    void this.loadExternalAudioBuffer(url);
+    proceduralFallback();
+    return false;
+  }
+
+  public getExternalAudioStats() {
+    return {
+      cachedBuffers: this.externalBufferCache.size,
+      failedUrls: this.failedAudioUrls.size,
+    };
   }
 
   public playHeartbeat(beats = 4, delaySec = 0) {

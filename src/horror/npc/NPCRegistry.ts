@@ -1,14 +1,37 @@
 import { Vec3 } from '../../types/game';
 import { NPCCharacterType, NPCState } from './NPCStateMachine';
+import { NPCAnimationClipName } from './NPCAnimationController';
 import { NarrativeState } from '../../data/narrativePack';
+
+export interface NPCAssetContract {
+  /** Canonical target Blender GLB path under public/models/npcs/ */
+  expectedGlbPath: string;
+  /** Optional lower-detail LOD GLB path for medium/far distances */
+  expectedLodPath?: string;
+  lodDistanceMeters?: number;
+  /** Must only be flipped to true once a real, licensed, rigged .glb file exists at expectedGlbPath */
+  glbAssetPresent: boolean;
+  /** Priority clips verified by NPCModelValidator v5.1 */
+  requiredClips: NPCAnimationClipName[];
+  /** Scale multiplier applied after loading GLB */
+  scale: number;
+  /** Ground contact Y offset */
+  groundOffsetY: number;
+  /** All NPC navigation is driven by NPCNavigation; GLB animations must be in-place */
+  rootMotionPolicy: 'in-place';
+  /** Canonical directory for optional real recorded audio files under public/audio/npcs/ */
+  expectedAudioDir: string;
+}
 
 export interface NPCCharacterDefinition {
   type: NPCCharacterType;
   displayName: string;
   heightMeters: number;
   capsuleRadius: number;
-  /** Optional external rigged Blender GLB path (loaded via SkeletonUtils.clone if present) */
+  /** Active external rigged Blender GLB URL (undefined while glbAssetPresent === false -> zero 404s) */
   glbUrl?: string;
+  /** Full v5.1 asset & Blender integration contract */
+  assetContract: NPCAssetContract;
   defaultSafeDistance: number;
   maxActiveDistance: number;
   supportedAnimations: string[];
@@ -39,6 +62,27 @@ export const NPC_DEFINITIONS: Record<NPCCharacterType, NPCCharacterDefinition> =
     displayName: 'Đào Thị Mây (Cô Gái Áo Đỏ)',
     heightMeters: 1.64,
     capsuleRadius: 0.34,
+    assetContract: {
+      expectedGlbPath: '/models/npcs/dao-thi-may/dao-thi-may.glb',
+      expectedLodPath: '/models/npcs/dao-thi-may/dao-thi-may-lod.glb',
+      lodDistanceMeters: 14,
+      glbAssetPresent: false,
+      requiredClips: [
+        'Idle',
+        'HeadTilt',
+        'SlowHeadRaise',
+        'SlowWalk',
+        'BackwardWalk',
+        'ReachForward',
+        'Lunge',
+        'JumpscareAttack',
+        'Disappear',
+      ],
+      scale: 1,
+      groundOffsetY: 0,
+      rootMotionPolicy: 'in-place',
+      expectedAudioDir: '/audio/npcs/dao-thi-may/',
+    },
     defaultSafeDistance: 1.35,
     maxActiveDistance: 22,
     supportedAnimations: [
@@ -56,6 +100,24 @@ export const NPC_DEFINITIONS: Record<NPCCharacterType, NPCCharacterDefinition> =
     displayName: 'Trần Thị Liên (1988)',
     heightMeters: 1.62,
     capsuleRadius: 0.34,
+    assetContract: {
+      expectedGlbPath: '/models/npcs/tran-thi-lien/tran-thi-lien.glb',
+      lodDistanceMeters: 14,
+      glbAssetPresent: false,
+      requiredClips: [
+        'Idle',
+        'LimpWalk',
+        'Crawling',
+        'ShieldFace',
+        'ReachForward',
+        'JumpscareAttack',
+        'Disappear',
+      ],
+      scale: 1,
+      groundOffsetY: 0,
+      rootMotionPolicy: 'in-place',
+      expectedAudioDir: '/audio/npcs/tran-thi-lien/',
+    },
     defaultSafeDistance: 1.3,
     maxActiveDistance: 20,
     supportedAnimations: [
@@ -73,6 +135,16 @@ export const NPC_DEFINITIONS: Record<NPCCharacterType, NPCCharacterDefinition> =
     displayName: 'Hồn Đứa Trẻ Dưới Giếng (1978)',
     heightMeters: 0.96,
     capsuleRadius: 0.26,
+    assetContract: {
+      expectedGlbPath: '/models/npcs/well-child/well-child.glb',
+      lodDistanceMeters: 12,
+      glbAssetPresent: false,
+      requiredClips: ['Idle', 'HeadTilt', 'WaterRise', 'ReachForward', 'Disappear'],
+      scale: 1,
+      groundOffsetY: 0,
+      rootMotionPolicy: 'in-place',
+      expectedAudioDir: '/audio/npcs/well-child/',
+    },
     defaultSafeDistance: 1.4,
     maxActiveDistance: 18,
     supportedAnimations: [
@@ -89,6 +161,16 @@ export const NPC_DEFINITIONS: Record<NPCCharacterType, NPCCharacterDefinition> =
     displayName: 'Tượng Quan Gỗ Đình Làng (1958)',
     heightMeters: 2.05,
     capsuleRadius: 0.42,
+    assetContract: {
+      expectedGlbPath: '/models/npcs/wooden-statues/wooden-statue.glb',
+      lodDistanceMeters: 16,
+      glbAssetPresent: false,
+      requiredClips: ['Idle', 'HeadTilt', 'SlowWalk', 'ReachForward', 'Lunge'],
+      scale: 1,
+      groundOffsetY: 0,
+      rootMotionPolicy: 'in-place',
+      expectedAudioDir: '/audio/npcs/wooden-statues/',
+    },
     defaultSafeDistance: 1.75,
     maxActiveDistance: 24,
     supportedAnimations: [
@@ -105,6 +187,16 @@ export const NPC_DEFINITIONS: Record<NPCCharacterType, NPCCharacterDefinition> =
     displayName: 'Hành Khách Không Khuôn Mặt',
     heightMeters: 1.68,
     capsuleRadius: 0.34,
+    assetContract: {
+      expectedGlbPath: '/models/npcs/faceless-passengers/faceless-passenger.glb',
+      lodDistanceMeters: 16,
+      glbAssetPresent: false,
+      requiredClips: ['SittingIdle', 'HeadTilt', 'StandUp', 'SlowWalk', 'Disappear'],
+      scale: 1,
+      groundOffsetY: 0,
+      rootMotionPolicy: 'in-place',
+      expectedAudioDir: '/audio/npcs/faceless-passengers/',
+    },
     defaultSafeDistance: 1.45,
     maxActiveDistance: 24,
     supportedAnimations: [
@@ -122,6 +214,16 @@ export const NPC_DEFINITIONS: Record<NPCCharacterType, NPCCharacterDefinition> =
     displayName: 'Người Lái Đò (Nguyễn Văn Khải)',
     heightMeters: 1.7,
     capsuleRadius: 0.36,
+    assetContract: {
+      expectedGlbPath: '/models/npcs/ferryman/ferryman.glb',
+      lodDistanceMeters: 18,
+      glbAssetPresent: false,
+      requiredClips: ['SittingIdle', 'Rowing', 'Idle', 'StandUp', 'SlowWalk', 'Disappear'],
+      scale: 1,
+      groundOffsetY: 0,
+      rootMotionPolicy: 'in-place',
+      expectedAudioDir: '/audio/npcs/ferryman/',
+    },
     defaultSafeDistance: 1.65,
     maxActiveDistance: 26,
     supportedAnimations: ['rowing', 'idle', 'walking', 'head_turn', 'sudden_approach', 'disappear'],

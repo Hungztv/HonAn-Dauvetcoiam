@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Bug, Eye, Ghost, Play, RefreshCw, Skull, X } from 'lucide-react';
+import { Bug, CheckCircle2, Eye, Ghost, Play, RefreshCw, Skull, Square, X } from 'lucide-react';
 import { useGameStore } from '../../store/gameStore';
 import { npcDebugBus, NPCDebugSnapshot } from './npcDebugBus';
 import { NPCAnimationClipName } from '../npc/NPCAnimationController';
@@ -33,14 +33,14 @@ const JUMPSCARE_TYPES: JumpscareType[] = [
   'H_WATER_EMERGENCE',
 ];
 
-export function isNPCDebugAllowed(): boolean {
+function isNPCDebugAllowed(): boolean {
   if (typeof window === 'undefined') return false;
   const isDev = Boolean((import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV);
   return isDev || window.location.search.includes('debug=1');
 }
 
 /**
- * Developer-only 3D NPC & Physical Jumpscare Inspector (v5.0).
+ * Developer-only 3D NPC, GLB Pipeline & Physical Jumpscare Inspector (v5.1).
  * Strictly gated to DEV mode or `?debug=1` query param, toggleable via F9.
  * Never exposed to normal production players.
  */
@@ -106,14 +106,14 @@ export const NPCDebugPanel: React.FC = () => {
 
   return (
     <div
-      className="fixed top-20 right-4 z-40 w-[345px] max-h-[82vh] overflow-y-auto rounded-lg bg-[#090b0f]/92 border border-emerald-500/40 shadow-2xl text-zinc-100 font-mono text-[11px] p-3 space-y-3 backdrop-blur-md"
+      className="fixed top-20 right-4 z-40 w-[365px] max-h-[82vh] overflow-y-auto rounded-lg bg-[#090b0f]/92 border border-emerald-500/40 shadow-2xl text-zinc-100 font-mono text-[11px] p-3 space-y-3 backdrop-blur-md"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Header */}
       <div className="flex items-center justify-between border-b border-emerald-500/25 pb-2">
         <div className="flex items-center gap-1.5 text-emerald-300 font-bold tracking-wide">
           <Bug className="w-4 h-4" />
-          <span>HỒN ÁN v5.0 — 3D NPC DEBUG</span>
+          <span>HỒN ÁN v5.1 — 3D NPC & GLB DEBUG</span>
         </div>
         <button
           type="button"
@@ -224,6 +224,44 @@ export const NPCDebugPanel: React.FC = () => {
         </div>
       </div>
 
+      {/* v5.1 GLB Model & Validation Controls */}
+      <div className="space-y-1.5 border-t border-zinc-800 pt-2">
+        <div className="text-[10px] uppercase tracking-wider text-zinc-400 flex items-center gap-1">
+          <CheckCircle2 className="w-3 h-3 text-cyan-400" />
+          v5.1 Model Pipeline Controls
+        </div>
+        <div className="grid grid-cols-4 gap-1">
+          <button
+            type="button"
+            onClick={() => npcDebugBus.issueCommand({ preferredModelMode: 'GLB', reloadGlb: true })}
+            className="px-1.5 py-1 rounded bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/40 text-cyan-200 cursor-pointer"
+          >
+            Use GLB
+          </button>
+          <button
+            type="button"
+            onClick={() => npcDebugBus.issueCommand({ preferredModelMode: 'PROCEDURAL' })}
+            className="px-1.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-zinc-200 cursor-pointer"
+          >
+            Use Proc
+          </button>
+          <button
+            type="button"
+            onClick={() => npcDebugBus.issueCommand({ reloadGlb: true })}
+            className="px-1.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-amber-200 cursor-pointer"
+          >
+            Reload
+          </button>
+          <button
+            type="button"
+            onClick={() => npcDebugBus.issueCommand({ validateNow: true })}
+            className="px-1.5 py-1 rounded bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-200 cursor-pointer"
+          >
+            Validate
+          </button>
+        </div>
+      </div>
+
       {/* World NPC Animation & Positioning Controls */}
       <div className="space-y-1.5 border-t border-zinc-800 pt-2">
         <div className="text-[10px] uppercase tracking-wider text-zinc-400 flex items-center gap-1">
@@ -249,14 +287,23 @@ export const NPCDebugPanel: React.FC = () => {
                 forceClip: selectedClip,
                 forceCrawling: selectedClip === 'Crawling',
                 forceShieldFace: selectedClip === 'ShieldFace',
+                stopAnimation: false,
               })
             }
-            className="px-2.5 py-1 rounded bg-emerald-800/75 hover:bg-emerald-700 border border-emerald-500/40 text-emerald-100 cursor-pointer"
+            className="px-2 py-1 rounded bg-emerald-800/75 hover:bg-emerald-700 border border-emerald-500/40 text-emerald-100 cursor-pointer"
           >
             Play
           </button>
+          <button
+            type="button"
+            onClick={() => npcDebugBus.issueCommand({ stopAnimation: true })}
+            className="px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-red-300 cursor-pointer"
+            title="Stop Animation"
+          >
+            <Square className="w-3 h-3" />
+          </button>
         </div>
-        <div className="grid grid-cols-3 gap-1">
+        <div className="grid grid-cols-4 gap-1">
           <button
             type="button"
             onClick={() => npcDebugBus.issueCommand({ relocateToPlayerFront: true, forceState: 'Observing' })}
@@ -270,6 +317,13 @@ export const NPCDebugPanel: React.FC = () => {
             className="px-1.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-zinc-100 flex items-center justify-center gap-1 cursor-pointer"
           >
             <Ghost className="w-3 h-3" /> Stalk
+          </button>
+          <button
+            type="button"
+            onClick={() => npcDebugBus.issueCommand({ resetAnimation: true })}
+            className="px-1.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-cyan-200 cursor-pointer"
+          >
+            ResetAnim
           </button>
           <button
             type="button"
@@ -302,13 +356,29 @@ export const NPCDebugPanel: React.FC = () => {
                 <span>State: {npc.state}</span>
                 <span>Clip: {npc.clip}</span>
               </div>
+              <div className="flex items-center justify-between text-[10px] text-cyan-300">
+                <span>
+                  Src: {npc.modelSource} ({npc.glbLoaded ? 'GLB OK' : 'Fallback'})
+                </span>
+                <span>Val: {npc.validationStatus}</span>
+              </div>
+              <div className="flex items-center justify-between text-[10px] text-zinc-400">
+                <span>Skel: {npc.skeletonSummary}</span>
+                <span>
+                  H: {npc.boundingHeight.toFixed(2)}m • LOD:{npc.lodLevel}
+                </span>
+              </div>
               <div className="flex items-center justify-between text-[10px] text-zinc-400">
                 <span>
-                  Pos: [{npc.position[0].toFixed(1)}, {npc.position[1].toFixed(1)},{' '}
-                  {npc.position[2].toFixed(1)}]
+                  Tex: {npc.textureState} • T:{npc.mixerTime.toFixed(2)}s
                 </span>
                 <span>Op: {npc.opacity.toFixed(2)}</span>
               </div>
+              {npc.fallbackReason && (
+                <div className="text-[9.5px] text-amber-400/90 leading-tight pt-0.5">
+                  {npc.fallbackReason}
+                </div>
+              )}
               <div className="flex gap-1.5 text-[9px] pt-0.5">
                 <span
                   className={`px-1 rounded ${

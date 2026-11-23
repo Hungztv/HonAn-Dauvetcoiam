@@ -1,12 +1,11 @@
-# BÁO CÁO TỔNG THỂ TOÀN DIỆN DỰ ÁN — HỒN ÁN: DẤU VẾT CÕI ÂM (v5.0)
+# BÁO CÁO TỔNG THỂ TOÀN DIỆN DỰ ÁN — HỒN ÁN: DẤU VẾT CÕI ÂM (v5.1)
 
 > **Thể loại:** Webgame 3D Kinh Dị Tâm Lý – Điều Tra Án Mạng Dân Gian Việt Nam (Góc nhìn thứ nhất / First-Person)  
-> **Phiên bản hiện tại:** `v5.0` (Full 3D NPC Horror, Rigging, Animation, Level 3 AI & Physical Jumpscare System)  
+> **Phiên bản hiện tại:** `v5.1` (Realistic 3D Character GLB Asset Pipeline, Validator v5.1, AudioBuffer Spatial Layer & Blender Artist Spec)  
 > **Chuẩn cốt truyện:** Narrative Design Bible `v3.0` & Narrative Data Pack `v3.1`  
 > **Chuẩn lưu dữ liệu:** Save Schema `v4` (`localStorage` key: `hon_an_save_v4`)  
 > **Kho lưu trữ GitHub:** [https://github.com/Hungztv/HonAn-Dauvetcoiam.git](https://github.com/Hungztv/HonAn-Dauvetcoiam.git) (nhánh `main`)  
-> **Quy mô mã nguồn thực tế:** **55 tệp trong `src/` (~15.683 dòng TypeScript/TSX/CSS)** + 9 tệp cấu hình & báo cáo ở thư mục gốc.  
-> **Trạng thái kiểm thử:** **29/29 Vitest tests PASS**, **`tsc -b && vite build` PASS (0 lỗi)**, **Live Browser QA PASS (0 console/page error, ~214 FPS ở preset HIGH)**.
+> **Trạng thái kiểm thử:** **34/34 Vitest tests PASS**, **`tsc -b && vite build` PASS (0 lỗi, 4.76s)**, **Live Browser QA PASS (0 console/page error, ~214–231 FPS ở preset HIGH)**.
 
 ---
 

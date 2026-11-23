@@ -1,8 +1,21 @@
 import { Vec3 } from '../../types/game';
 import { NPCCharacterType, NPCState } from '../npc/NPCStateMachine';
 import { NPCAnimationClipName } from '../npc/NPCAnimationController';
+import { ValidationStatus } from '../npc/NPCModelValidator';
 
-export interface NPCDebugSnapshot {
+export interface NPCModelRuntimeInfo {
+  modelSource: 'PROCEDURAL' | 'GLB';
+  glbLoaded: boolean;
+  validationStatus: 'NONE' | ValidationStatus;
+  skeletonSummary: string;
+  mixerTime: number;
+  lodLevel: 'HIGH' | 'MEDIUM' | 'LOW';
+  boundingHeight: number;
+  textureState: 'PROCEDURAL_PBR' | 'GLB_PBR' | 'LOADING';
+  fallbackReason: string | null;
+}
+
+export interface NPCDebugSnapshot extends NPCModelRuntimeInfo {
   id: string;
   type: NPCCharacterType;
   state: NPCState;
@@ -24,6 +37,12 @@ export interface NPCDebugOverrideCommand {
   forceCrawling?: boolean;
   forceShieldFace?: boolean;
   relocateToPlayerFront?: boolean;
+  /** v5.1 Model & Animation Debug Controls */
+  preferredModelMode?: 'AUTO' | 'PROCEDURAL' | 'GLB';
+  reloadGlb?: boolean;
+  validateNow?: boolean;
+  stopAnimation?: boolean;
+  resetAnimation?: boolean;
   resetAll?: boolean;
   issuedAt: number;
 }
@@ -35,8 +54,18 @@ export interface NPCDebugOverrideCommand {
 class NPCDebugBus {
   public enabled = false;
   private snapshots = new Map<string, NPCDebugSnapshot>();
+  private modelRuntime = new Map<string, NPCModelRuntimeInfo>();
   private pendingCommand: NPCDebugOverrideCommand | null = null;
   private commandSeq = 0;
+
+  public reportModelRuntime(id: string, info: NPCModelRuntimeInfo) {
+    if (!this.enabled) return;
+    this.modelRuntime.set(id, info);
+  }
+
+  public getModelRuntime(id: string): NPCModelRuntimeInfo | undefined {
+    return this.modelRuntime.get(id);
+  }
 
   public reportSnapshot(snap: NPCDebugSnapshot) {
     if (!this.enabled) return;
@@ -45,6 +74,7 @@ class NPCDebugBus {
 
   public removeSnapshot(id: string) {
     this.snapshots.delete(id);
+    this.modelRuntime.delete(id);
   }
 
   public getSnapshots(): NPCDebugSnapshot[] {
@@ -53,6 +83,7 @@ class NPCDebugBus {
 
   public clearSnapshots() {
     this.snapshots.clear();
+    this.modelRuntime.clear();
   }
 
   public issueCommand(cmd: Omit<NPCDebugOverrideCommand, 'issuedAt'>) {
