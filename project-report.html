@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Báo Cáo Tiến Độ Dự Án — HỒN ÁN: Dấu Vết Cõi Âm</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,500&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-deep: #090706;
+      --bg-panel: #130f0c;
+      --bg-card: #1a1410;
+      --bg-elevated: #231a14;
+      --border-wood: #4f3623;
+      --border-glow: #7f1d1d;
+      --crimson: #b91c1c;
+      --crimson-soft: rgba(185, 28, 28, 0.16);
+      --gold: #d4a644;
+      --gold-soft: rgba(212, 166, 68, 0.14);
+      --emerald: #10b981;
+      --emerald-soft: rgba(16, 185, 129, 0.14);
+      --amber: #f59e0b;
+      --text-main: #efe4cc;
+      --text-body: #d3c6ae;
+      --text-muted: #9a8d78;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at 20% 0%, #1d120e 0%, var(--bg-deep) 55%);
+      color: var(--text-main);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 36px 24px 72px;
+    }
+
+    /* Header / Hero */
+    .hero {
+      position: relative;
+      background: linear-gradient(135deg, #1b120e 0%, #110c0a 60%, #1c0b0b 100%);
+      border: 1px solid var(--border-wood);
+      border-radius: 14px;
+      padding: 36px 40px;
+      overflow: hidden;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
+      margin-bottom: 28px;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--crimson), var(--gold), var(--crimson), transparent);
+    }
+
+    .hero-top {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      padding: 5px 12px;
+      border-radius: 999px;
+      border: 1px solid;
+    }
+
+    .badge-crimson {
+      background: var(--crimson-soft);
+      border-color: rgba(185, 28, 28, 0.55);
+      color: #fca5a5;
+    }
+
+    .badge-emerald {
+      background: var(--emerald-soft);
+      border-color: rgba(16, 185, 129, 0.45);
+      color: #6ee7b7;
+    }
+
+    .badge-gold {
+      background: var(--gold-soft);
+      border-color: rgba(212, 166, 68, 0.45);
+      color: #f3d284;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: clamp(2rem, 4vw, 3rem);
+      letter-spacing: 0.04em;
+      color: #f6ecd7;
+      line-height: 1.15;
+    }
+
+    .subtitle {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 1.3rem;
+      font-style: italic;
+      color: #e2a29e;
+      margin-top: 6px;
+    }
+
+    .hero-meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-top: 26px;
+      padding-top: 22px;
+      border-top: 1px solid rgba(110, 76, 48, 0.45);
+      font-size: 13px;
+    }
+
+    .meta-item span {
+      display: block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      margin-bottom: 3px;
+    }
+
+    .meta-item strong,
+    .meta-item a {
+      color: var(--text-main);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .meta-item a:hover {
+      color: var(--gold);
+      text-decoration: underline;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      border: 1px solid var(--border-wood);
+      background: var(--bg-elevated);
+      color: var(--text-main);
+    }
+
+    .btn:hover {
+      border-color: var(--gold);
+      background: #2f2219;
+    }
+
+    .btn-primary {
+      background: #8f1a1a;
+      border-color: #b91c1c;
+      color: #fff5e6;
+    }
+
+    .btn-primary:hover {
+      background: #a81f1f;
+      border-color: #ef4444;
+    }
+
+    /* Overall Progress Banner */
+    .overall-bar-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-wood);
+      border-radius: 12px;
+      padding: 22px 26px;
+      margin-bottom: 24px;
+    }
+
+    .overall-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .overall-head h2 {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 1.45rem;
+      color: var(--gold);
+    }
+
+    .overall-percent {
+      font-size: 1.65rem;
+      font-weight: 700;
+      color: #6ee7b7;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 12px;
+      background: #0c0907;
+      border: 1px solid #3c291b;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #991b1b 0%, #d4a644 65%, #10b981 100%);
+      transition: width 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /* KPI Grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .kpi-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-wood);
+      border-radius: 12px;
+      padding: 18px 20px;
+      position: relative;
+    }
+
+    .kpi-card::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 16px;
+      bottom: 16px;
+      width: 3px;
+      border-radius: 0 3px 3px 0;
+      background: var(--crimson);
+    }
+
+    .kpi-value {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 2rem;
+      font-weight: 700;
+      color: #f6ecd7;
+      line-height: 1.1;
+    }
+
+    .kpi-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .kpi-sub {
+      font-size: 11px;
+      color: var(--gold);
+      margin-top: 4px;
+    }
+
+    /* Navigation Tabs */
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 22px;
+      border-bottom: 1px solid #3b281a;
+      padding-bottom: 12px;
+    }
+
+    .tab-btn {
+      padding: 9px 16px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .tab-btn.active {
+      background: var(--bg-elevated);
+      border-color: var(--border-wood);
+      color: var(--gold);
+    }
+
+    .section-panel {
+      display: none;
+      animation: fadeIn 0.28s ease;
+    }
+
+    .section-panel.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Section Headings */
+    .section-title {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.5rem;
+      color: #f4e8cf;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title::before {
+      content: "";
+      width: 4px;
+      height: 22px;
+      background: var(--crimson);
+      border-radius: 2px;
+    }
+
+    /* Phase Cards */
+    .phase-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-wood);
+      border-radius: 12px;
+      padding: 20px 22px;
+    }
+
+    .phase-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .phase-tag {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+
+    .status-pill {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 999px;
+    }
+
+    .status-done {
+      background: var(--emerald-soft);
+      color: #6ee7b7;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    .status-bonus {
+      background: var(--gold-soft);
+      color: #f3d284;
+      border: 1px solid rgba(212, 166, 68, 0.45);
+    }
+
+    .status-pending {
+      background: rgba(245, 158, 11, 0.14);
+      color: #fcd34d;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }
+
+    .card h3 {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 1.32rem;
+      color: var(--text-main);
+      margin-bottom: 8px;
+    }
+
+    .card p {
+      font-size: 13px;
+      color: var(--text-body);
+    }
+
+    .check-list {
+      list-style: none;
+      margin-top: 12px;
+      display: grid;
+      gap: 7px;
+    }
+
+    .check-list li {
+      font-size: 12.5px;
+      color: var(--text-body);
+      padding-left: 20px;
+      position: relative;
+    }
+
+    .check-list li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: var(--emerald);
+      font-weight: 700;
+    }
+
+    /* Levels Table / Cards */
+    .level-list {
+      display: grid;
+      gap: 16px;
+    }
+
+    .level-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-wood);
+      border-radius: 12px;
+      padding: 20px 24px;
+    }
+
+    .level-top {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid #352418;
+      padding-bottom: 12px;
+      margin-bottom: 14px;
+    }
+
+    .level-title {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.28rem;
+      color: #f4e8cf;
+    }
+
+    .tier-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+    }
+
+    .tier-box {
+      background: var(--bg-card);
+      border: 1px solid #3c291b;
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+
+    .tier-box span {
+      display: block;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #f87171;
+      margin-bottom: 4px;
+    }
+
+    .tier-box p {
+      font-size: 12.5px;
+      color: var(--text-body);
+    }
+
+    /* Table */
+    .table-wrap {
+      overflow-x: auto;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-wood);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 13px 16px;
+      border-bottom: 1px solid #2e2016;
+    }
+
+    th {
+      background: #1a130e;
+      color: var(--gold);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    code {
+      font-family: Consolas, 'Courier New', monospace;
+      font-size: 12px;
+      background: #0d0a08;
+      border: 1px solid #3a281a;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #f3d284;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 18px;
+    }
+
+    .callout {
+      background: rgba(127, 29, 29, 0.14);
+      border: 1px solid rgba(185, 28, 28, 0.45);
+      border-left: 4px solid var(--crimson);
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-top: 20px;
+      font-size: 13px;
+      color: #f0dfd0;
+    }
+
+    footer {
+      margin-top: 44px;
+      padding-top: 20px;
+      border-top: 1px solid #352418;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    @media print {
+      body { background: #fff; color: #111; }
+      .hero, .card, .kpi-card, .overall-bar-card, .level-card, .table-wrap {
+        background: #fff !important;
+        color: #111 !important;
+        border-color: #ccc !important;
+        box-shadow: none !important;
+      }
+      .actions, .tabs { display: none !important; }
+      .section-panel { display: block !important; margin-bottom: 24px; }
+      h1, h2, h3, .level-title, .kpi-value, .section-title { color: #111 !important; }
+      p, li, td, span { color: #333 !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- HERO -->
+    <header class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="badge-row">
+            <span class="badge badge-crimson">Báo Cáo Tiến Độ Dự Án</span>
+            <span class="badge badge-emerald">Playable Build v1.2 — Ổn Định</span>
+            <span class="badge badge-gold">Unity-Style WebGL PBR + Post-FX</span>
+          </div>
+          <h1>HỒN ÁN – DẤU VẾT CÕI ÂM</h1>
+          <p class="subtitle">Webgame 3D Trinh Thám Kinh Dị Tâm Lý Góc Nhìn Thứ Nhất Lấy Cảm Hứng Từ Văn Hóa Dân Gian Việt Nam</p>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="window.print()">In / Xuất Báo Cáo PDF</button>
+          <a class="btn" href="https://github.com/Hungztv/HonAn-Dauvetcoiam" target="_blank" rel="noopener">Mở GitHub Repo</a>
+        </div>
+      </div>
+
+      <div class="hero-meta">
+        <div class="meta-item">
+          <span>Ngày cập nhật báo cáo</span>
+          <strong>23/11/2026</strong>
+        </div>
+        <div class="meta-item">
+          <span>Nền tảng & Công nghệ</span>
+          <strong>React 18 • TypeScript • R3F / Three.js • Tailwind • Zustand</strong>
+        </div>
+        <div class="meta-item">
+          <span>Kho lưu trữ GitHub</span>
+          <a href="https://github.com/Hungztv/HonAn-Dauvetcoiam" target="_blank" rel="noopener">github.com/Hungztv/HonAn-Dauvetcoiam</a>
+        </div>
+        <div class="meta-item">
+          <span>Trạng thái Build Production</span>
+          <strong style="color:#6ee7b7;">Pass (0 lỗi TS / 0 lỗi WebGL)</strong>
+        </div>
+      </div>
+    </header>
+
+    <!-- OVERALL PROGRESS -->
+    <section class="overall-bar-card">
+      <div class="overall-head">
+        <h2>Tiến Độ Tổng Thể Theo Đặc Tả Dự Án (6/6 Giai Đoạn + 2 Gói Mở Rộng)</h2>
+        <span class="overall-percent">100%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" style="width: 100%;"></div>
+      </div>
+      <p style="font-size:12.5px; color:var(--text-muted); margin-top:10px;">
+        Toàn bộ các cơ chế cốt lõi, 5 màn chơi giải đố 3 tầng, Sổ điều tra & Bảng kết nối chỉ đỏ, âm thanh 3D Web Audio, hệ thống Jumpscare và gói nâng cấp đồ họa PBR + Post-Processing đã hoàn thiện và chạy thực tế trên trình duyệt.
+      </p>
+    </section>
+
+    <!-- KPI CARDS -->
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-value">5 / 5</div>
+        <div class="kpi-label">Màn chơi hoàn chỉnh</div>
+        <div class="kpi-sub">Đủ 15 tầng giải đố có logic</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value">28</div>
+        <div class="kpi-label">Tệp mã nguồn trong <code>src/</code></div>
+        <div class="kpi-sub">8.605 dòng code TypeScript/TSX</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value">23+</div>
+        <div class="kpi-label">Vật chứng 3D xoay 360°</div>
+        <div class="kpi-sub">17 mẫu mesh + hotspot ẩn 3D</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value">4</div>
+        <div class="kpi-label">Biến thể Jumpscare dân gian</div>
+        <div class="kpi-sub">Kèm rung camera & âm thanh tim đập</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value">512px</div>
+        <div class="kpi-label">Vật liệu PBR 3 kênh</div>
+        <div class="kpi-sub">Albedo + Bump + Roughness + Bloom</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value">4.55s</div>
+        <div class="kpi-label">Thời gian Vite Build</div>
+        <div class="kpi-sub"><code>tsc -b && vite build</code> sạch lỗi</div>
+      </div>
+    </section>
+
+    <!-- INTERACTIVE TABS -->
+    <nav class="tabs" role="tablist">
+      <button class="tab-btn active" data-tab="phases">1. Tiến Độ 6 Giai Đoạn & Mở Rộng</button>
+      <button class="tab-btn" data-tab="levels">2. Chi Tiết 5 Vụ Án (Giải Đố 3 Tầng)</button>
+      <button class="tab-btn" data-tab="tech">3. Kiến Trúc Kỹ Thuật & Đồ Họa PBR</button>
+      <button class="tab-btn" data-tab="qa">4. Kiểm Thử QA, GitHub & Bước Tiếp Theo</button>
+    </nav>
+
+    <!-- TAB 1: PHASES -->
+    <section id="tab-phases" class="section-panel active">
+      <h2 class="section-title">Tiến Độ Theo Từng Giai Đoạn Triển Khai</h2>
+      <div class="phase-grid">
+        <div class="card">
+          <div class="phase-header">
+            <span class="phase-tag">Giai Đoạn 01</span>
+            <span class="status-pill status-done">Hoàn Thành 100%</span>
+          </div>
+          <h3>Điều Khiển First-Person & Môi Trường 3D</h3>
+          <p>Xây dựng hệ thống camera góc nhìn thứ nhất, va chạm và không gian 3D hoàn chỉnh.</p>
+          <ul class="check-list">
+            <li>Di chuyển WASD, xoay 360° với Pointer Lock (+ fallback giữ chuột kéo).</li>
+            <li>Chạy (Shift), ngồi xuống (Ctrl / C), đèn pin có pin & chớp tắt (F).</li>
+            <li>Va chạm AABB mượt với tường, cột lim, bàn thờ, giếng và cửa niêm phong.</li>
+            <li>Hiệu ứng nhún bước đi (head-bob) & âm thanh bước chân theo bề mặt gỗ/đá/đất/nước.</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <div class="phase-header">
+            <span class="phase-tag">Giai Đoạn 02</span>
+            <span class="status-pill status-done">Hoàn Thành 100%</span>
+          </div>
+          <h3>Tương Tác & Kiểm Tra Vật Chứng 360°</h3>
+          <p>Cơ chế Inspect Object cốt lõi cho phép soi chi tiết ẩn trên mô hình 3D.</p>
+          <ul class="check-list">
+            <li>Tâm ngắm đổi trạng thái + hiện tên vật chứng & hướng dẫn nhấn <code>E</code>.</li>
+            <li>Studio 3D xoay 360°, phóng to/thu nhỏ xem mặt sau và đáy vật chứng.</li>
+            <li>Điểm tương tác ẩn 3D (hotspots) phát hiện tóc ướt, dấu mực đỏ, vết khắc...</li>
+            <li>Tự động ghi chú thích, mở khóa manh mối vào Sổ điều tra & đóng bằng ESC.</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <div class="phase-header">
+            <span class="phase-tag">Giai Đoạn 03</span>
+            <span class="status-pill status-done">Hoàn Thành 100%</span>
+          </div>
+          <h3>Hệ Thống Giải Đố 3 Tầng & Sổ Điều Tra</h3>
+          <p>Sổ điều tra 5 tab cùng 3 cơ chế giải đố logic không lộ đáp án sẵn.</p>
+          <ul class="check-list">
+            <li>Đủ 5 tab: Hồ Sơ Vụ Án, Vật Chứng, Manh Mối, Nghi Can, Bảng Kết Nối.</li>
+            <li>Bảng Kết Nối cho phép kéo thả thẻ & nối sợi chỉ đỏ xác thực suy luận.</li>
+            <li>3 dạng câu đố thực tế: Khóa xoay mật mã, Sắp xếp trình tự nghi thức, Phán quyết Tầng 3.</li>
+            <li>Tự động mở khóa cửa niêm phong & chuyển Tầng 1 → Tầng 2 → Tầng 3.</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <div class="phase-header">
+            <span class="phase-tag">Giai Đoạn 04 & 05</span>
+            <span class="status-pill status-done">Hoàn Thành 100%</span>
+          </div>
+          <h3>Trọn Bộ 5 Màn Chơi & Cốt Truyện Liên Kết</h3>
+          <p>Toàn bộ 5 vụ án đều chơi được từ đầu tới cuối và nối liền thành mạch truyện tổng thể.</p>
+          <ul class="check-list">
+            <li>Level 01 – 05 với kiến trúc riêng: Nhà ba gian, Miếu rừng tre, Làng giếng, Đình cổ, Bến đò âm.</li>
+            <li>Cơ chế mở khóa chương tuần tự + tùy chọn mở nhanh trong Chọn Chương.</li>
+            <li>Màn hình giới thiệu chương, tổng kết phá án và Hồi Kết (Grand Ending).</li>
+            <li>Tự động lưu tiến độ qua <code>localStorage</code> (tiếp tục chơi chính xác).</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <div class="phase-header">
+            <span class="phase-tag">Giai Đoạn 06</span>
+            <span class="status-pill status-done">Hoàn Thành 100%</span>
+          </div>
+          <h3>UI/UX Dark Gothic, Âm Thanh 3D & Dynamic Horror</h3>
+          <p>Hoàn thiện giao diện tiếng Việt cổ điển, Web Audio 3D và kinh dị tâm lý.</p>
+          <ul class="check-list">
+            <li>Main Menu có mô hình 3D nhà cổ trong sương mù chạy trực tiếp làm nền.</li>
+            <li>Web Audio HRTF 3D: gió đêm, côn trùng, gỗ kẽo kẹt, mõ, chuông chùa, hát ru ngũ cung.</li>
+            <li>Dynamic Horror: đèn dầu tự tắt, bước chân sau lưng, bóng ma biến mất khi rọi đèn, tượng gỗ tự xoay mặt.</li>
+          </ul>
+        </div>
+
+        <div class="card" style="border-color: rgba(212, 166, 68, 0.55);">
+          <div class="phase-header">
+            <span class="phase-tag">Gói Nâng Cấp Mở Rộng</span>
+            <span class="status-pill status-bonus">Đã Tích Hợp 100%</span>
+          </div>
+          <h3>Hệ Thống Jumpscare & Đồ Họa Chuẩn Unity WebGL</h3>
+          <p>Nâng tầm trải nghiệm thị giác và cảm giác giật mình kinh dị theo yêu cầu bổ sung.</p>
+          <ul class="check-list">
+            <li>4 biến thể Jumpscare dân gian (Oan hồn áo đỏ, Bàn tay đáy giếng, Tượng gỗ mắt máu, Lái đò không mặt) kèm rung camera & tiếng tim đập.</li>
+            <li>Nâng cấp vật liệu PBR 512px (Albedo + Bump + Roughness) phản sáng dưới đèn pin.</li>
+            <li>Post-Processing (ACES Filmic, Bloom, Chromatic Aberration, Film Grain, Vignette).</li>
+            <li>Kiến trúc Việt chi tiết: Hoành Phi, Câu Đối, vì kèo gỗ, khói nhang, sương mù tầng thấp, shader nước động GLSL.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: LEVELS -->
+    <section id="tab-levels" class="section-panel">
+      <h2 class="section-title">Cấu Trúc 5 Màn Chơi & Chuỗi Giải Đố 3 Tầng</h2>
+      <div class="level-list">
+        <div class="level-card">
+          <div class="level-top">
+            <div>
+              <span class="phase-tag">LEVEL 01 • level1.ts</span>
+              <div class="level-title">Ngôi Nhà Không Có Người Sống</div>
+            </div>
+            <span class="status-pill status-done">Hoàn thiện • Chơi được</span>
+          </div>
+          <div class="tier-grid">
+            <div class="tier-box">
+              <span>Tầng 1 — Thu thập manh mối</span>
+              <p>Khám phá bàn thờ gia tiên, buồng ngủ cũ và giếng đá sau nhà (Bát hương nứt, Lược gỗ dính tóc, Tờ sớ mực đỏ).</p>
+            </div>
+            <div class="tier-box">
+              <span>Tầng 2 — Giải mã & Mở khóa</span>
+              <p>Kết nối manh mối trên Bảng Kết Nối, giải Khóa Phong Ấn bàn thờ (<code>1507</code>) để phá bùa mở Buồng Niêm Phong phía Đông.</p>
+            </div>
+            <div class="tier-box">
+              <span>Tầng 3 — Đối mặt sự thật</span>
+              <p>Kiểm tra Bức ảnh bị xé & Cuốn sổ ông Khải trong buồng kín, vạch trần bi kịch của Trần Thị Liên và dấu ấn Miếu Cô Đỏ.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="level-card">
+          <div class="level-top">
+            <div>
+              <span class="phase-tag">LEVEL 02 • level2.ts</span>
+              <div class="level-title">Miếu Cô Gái Áo Đỏ</div>
+            </div>
+            <span class="status-pill status-done">Hoàn thiện • Chơi được</span>
+          </div>
+          <div class="tier-grid">
+            <div class="tier-box">
+              <span>Tầng 1 — Thu thập manh mối</span>
+              <p>Điều tra rừng tre đung đưa, gốc cây đa rễ buông và tiền điện miếu (Trâm ngọc, Lá bùa Năm Đen, Búp bê giấy áo đỏ).</p>
+            </div>
+            <div class="tier-box">
+              <span>Tầng 2 — Giải mã & Mở khóa</span>
+              <p>Giải mã thứ tự câu đối cổ trên Bệ Nghi Thức (Thanh tẩy → Dẫn hồn → Nhận danh → Giải oan) mở cửa Hậu Cung.</p>
+            </div>
+            <div class="tier-box">
+              <span>Tầng 3 — Đối mặt sự thật</span>
+              <p>Đối diện bóng áo đỏ trong Hậu Cung, soi Bài Vị gỗ nứt và giải oan cho Đào Thị Mây (1968).</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="level-card">
+          <div class="level-top">
+            <div>
+              <span class="phase-tag">LEVEL 03 • level3.ts</span>
+              <div class="level-title">Tiếng Gõ Từ Đáy Giếng</div>
+            </div>
+            <span class="status-pill status-done">Hoàn thiện • Chơi được</span>
+          </div>
+          <div class="tier-grid">
+            <div class="tier-box">
+              <span>Tầng 1 — Thu thập manh mối</span>
+              <p>Khám phá Nhà Thầy Cúng, Nhà Bà Đỡ và thành giếng cổ (Dao gỉ sét, Đồng xu sứt đá, Sổ hộ tịch rách, Dây thừng bị cắt).</p>
+            </div>
+            <div class="tier-box">
+              <span>Tầng 2 — Giải mã & Mở khóa</span>
+              <p>Ghép mốc năm biến cố trên Khóa Trục Tời Giếng (<code>1978</code>) để giật xích mở khóa Nhà Trưởng Thôn phía Bắc.</p>
+            </div>
+            <div class="tier-box">
+              <span>Tầng 3 — Đối mặt sự thật</span>
+              <p>Thu thập Sổ mật Nhà Trưởng Thôn, giải mã nguyên nhân tiếng gõ dưới đáy giếng và lần ra âm mưu tại Ngôi Đình Cổ.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="level-card">
+          <div class="level-top">
+            <div>
+              <span class="phase-tag">LEVEL 04 • level4.ts</span>
+              <div class="level-title">Ngôi Đình Lúc Nửa Đêm</div>
+            </div>
+            <span class="status-pill status-done">Hoàn thiện • Chơi được</span>
+          </div>
+          <div class="tier-grid">
+            <div class="tier-box">
+              <span>Tầng 1 — Thu thập manh mối</span>
+              <p>Điều tra Đại Bái giữa 4 pho tượng gỗ tự xoay mặt khi bạn quay lưng (Sắc phong bị tráo, Dùi trống, Mảnh phù điêu, Bài vị chuông).</p>
+            </div>
+            <div class="tier-box">
+              <span>Tầng 2 — Giải mã & Mở khóa</span>
+              <p>Đánh đúng trình tự 4 hồi Trống Hội Đình Làng (Đông → Nam → Tây → Bắc) để khai mở cửa Hậu Cung.</p>
+            </div>
+            <div class="tier-box">
+              <span>Tầng 3 — Đối mặt sự thật</span>
+              <p>Kiểm tra Bản Giao Ước Bến Đò Âm, phá hủy sắc phong giả và giải thoát linh khí Thành Hoàng.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="level-card">
+          <div class="level-top">
+            <div>
+              <span class="phase-tag">LEVEL 05 • level5.ts</span>
+              <div class="level-title">Chuyến Đò Sang Cõi Âm (Hồi Kết)</div>
+            </div>
+            <span class="status-pill status-done">Hoàn thiện • Chơi được</span>
+          </div>
+          <div class="tier-grid">
+            <div class="tier-box">
+              <span>Tầng 1 — Thu thập manh mối</span>
+              <p>Khám phá bờ sông sương mù và cầu gỗ (Sổ Lái Đò, Đèn lồng giấy đỏ, Bốn đồng tiền âm dương, Thư tuyệt mệnh ông Khải).</p>
+            </div>
+            <div class="tier-box">
+              <span>Tầng 2 — Giải mã & Mở khóa</span>
+              <p>Mở Hòm Sắt Người Lái Đò bằng đúng thứ tự 4 tín vật từ Án 01–04 (Lược → Trâm → Xu → Trống) để hạ xích bước lên đò.</p>
+            </div>
+            <div class="tier-box">
+              <span>Tầng 3 — Đối mặt sự thật</span>
+              <p>Bước vào khoang đò giữa 4 hành khách không khuôn mặt, soi Lệnh Bài Lái Đò và hoàn tất Phán Quyết kết thúc câu chuyện.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: ARCHITECTURE & GRAPHICS -->
+    <section id="tab-tech" class="section-panel">
+      <h2 class="section-title">Kiến Trúc Mã Nguồn & Nâng Cấp Đồ Họa Chuẩn Unity WebGL</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Phân Hệ</th>
+              <th>Tệp Chính</th>
+              <th>Công Nghệ / Cơ Chế Đã Triển Khai</th>
+              <th>Trạng Thái</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>FPS & Physics</strong></td>
+              <td><code>src/three/FirstPersonController.tsx</code></td>
+              <td>Pointer Lock, drag-look fallback, AABB collision, crouch, sprint, flashlight shadows, jumpscare camera shake</td>
+              <td><span class="status-pill status-done">Ổn định</span></td>
+            </tr>
+            <tr>
+              <td><strong>PBR Material Engine</strong></td>
+              <td><code>src/three/proceduralTextures.ts</code></td>
+              <td>512×512 PBR 3 kênh (Albedo + BumpMap + RoughnessMap), anisotropy 4x, thư pháp Hoành Phi & Câu Đối</td>
+              <td><span class="status-pill status-done">Đã nâng cấp</span></td>
+            </tr>
+            <tr>
+              <td><strong>Post-Processing</strong></td>
+              <td><code>src/three/HorrorPostProcessing.tsx</code></td>
+              <td>ACES Filmic Tone Mapping, Bloom (mipmapBlur), Chromatic Aberration động, Film Grain, Vignette</td>
+              <td><span class="status-pill status-done">Đã nâng cấp</span></td>
+            </tr>
+            <tr>
+              <td><strong>Setpieces & Shaders</strong></td>
+              <td><code>VietnameseProps.tsx</code>, <code>AtmosphericEffects.tsx</code></td>
+              <td>GLSL Water Shader gợn sóng, sương mù tầng thấp, khói nhang bay lên, rừng tre đung đưa, vì kèo gỗ, giếng trụ tròn</td>
+              <td><span class="status-pill status-done">Đã nâng cấp</span></td>
+            </tr>
+            <tr>
+              <td><strong>3D Evidence Studio</strong></td>
+              <td><code>InspectModal.tsx</code>, <code>EvidenceModels.tsx</code></td>
+              <td>17 mẫu mô hình 3D thủ công, xoay 360° OrbitControls, zoom, 3D HTML hotspots neo trực tiếp trên bề mặt vật chứng</td>
+              <td><span class="status-pill status-done">Ổn định</span></td>
+            </tr>
+            <tr>
+              <td><strong>Sổ Điều Tra & Puzzles</strong></td>
+              <td><code>InvestigationJournal.tsx</code>, <code>PuzzleModal.tsx</code></td>
+              <td>5 tab đầy đủ, Bảng Kết Nối kéo thả + dây chỉ đỏ SVG, khóa mật mã, trình tự nghi thức, phán quyết sự thật</td>
+              <td><span class="status-pill status-done">Ổn định</span></td>
+            </tr>
+            <tr>
+              <td><strong>Horror & Jumpscare</strong></td>
+              <td><code>JumpscareOverlay.tsx</code>, <code>LevelEnvironment.tsx</code></td>
+              <td>4 biến thể Jumpscare, kích hoạt theo vùng / sau soi vật chứng / phục kích hồi chiêu 32s, công tắc bật/tắt</td>
+              <td><span class="status-pill status-done">Ổn định</span></td>
+            </tr>
+            <tr>
+              <td><strong>3D Audio & Save</strong></td>
+              <td><code>horrorAudio.ts</code>, <code>gameStore.ts</code></td>
+              <td>Web Audio HRTF PannerNode (tiếng mõ, chuông, gió, hát ru, jumpscare, tim đập) + Zustand auto-save <code>localStorage</code></td>
+              <td><span class="status-pill status-done">Ổn định</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 4: QA & NEXT STEPS -->
+    <section id="tab-qa" class="section-panel">
+      <h2 class="section-title">Kết Quả Kiểm Thử QA, Đồng Bộ GitHub & Hướng Phát Triển</h2>
+      <div class="two-col">
+        <div class="card">
+          <h3>Kết Quả Kiểm Thử Đã Xác Minh</h3>
+          <ul class="check-list">
+            <li><strong>Build Production:</strong> <code>tsc -b && vite build</code> đạt 0 lỗi TypeScript, đóng gói thành công trong 4.55s.</li>
+            <li><strong>Kiểm thử trình duyệt thực tế:</strong> Main Menu 3D diorama, Chapter Intro, cảnh 3D First-Person Màn 1, PBR floor reflections, Hoành Phi/Câu Đối, Bloom đèn dầu và Sổ điều tra hiển thị mượt với 0 lỗi console/WebGL.</li>
+            <li><strong>Lỗi đã phát hiện & sửa triệt để:</strong>
+              <br/>• Sửa lỗi lớp phủ Pointer Lock che nút HUD góc trên phải (<code>z-30</code>).
+              <br/>• Bọc an toàn promise <code>requestPointerLock()</code> tránh lỗi <code>WrongDocumentError</code> trên webview.
+              <br/>• Bổ sung chế độ giữ chuột kéo để xoay camera dự phòng.
+            </li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>Trạng Thái GitHub & Gợi Ý Bước Tiếp Theo</h3>
+          <ul class="check-list">
+            <li><strong>Đã đồng bộ GitHub (nhánh <code>main</code>):</strong> Toàn bộ mã nguồn v1.2 (5 màn chơi, Sổ điều tra, 3D Inspect, Web Audio, Jumpscare, gói nâng cấp đồ họa PBR + Post-Processing và file báo cáo <code>project-report.html</code>) đã được commit và đẩy lên kho lưu trữ.</li>
+            <li><strong>Đề xuất mở rộng tương lai (tùy chọn):</strong> Tách chunk bundle bằng dynamic import, nạp model <code>.glb</code> nén Draco từ Blender/Tripo3D cho nhân vật ma 3D, và thêm điều khiển cảm ứng (virtual joystick) cho di động.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="callout">
+        <strong>Lưu ý triển khai:</strong> Để chạy dự án cục bộ tại thư mục <code>C:\Users\duong\.gemini\antigravity\scratch\hon-an</code>, sử dụng lệnh <code>npm run dev</code> (hoặc <code>npm.cmd run dev</code> trên PowerShell) và truy cập <code>http://localhost:5173</code>.
+      </div>
+    </section>
+
+    <footer>
+      <span>Dự án: <strong>HỒN ÁN – DẤU VẾT CÕI ÂM</strong></span>
+      <span>Báo cáo tạo ngày 23/11/2026 • Độc lập hoàn toàn (Standalone HTML)</span>
+    </footer>
+  </div>
+
+  <script>
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const panels = document.querySelectorAll('.section-panel');
+
+    tabButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const target = btn.getAttribute('data-tab');
+        tabButtons.forEach((b) => b.classList.remove('active'));
+        panels.forEach((p) => p.classList.remove('active'));
+        btn.classList.add('active');
+        const activePanel = document.getElementById('tab-' + target);
+        if (activePanel) activePanel.classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>

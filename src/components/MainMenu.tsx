@@ -1,7 +1,10 @@
 import React, { useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Sparkles } from '@react-three/drei';
+import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 import * as THREE from 'three';
+import { getWorldMaterial } from '../three/proceduralTextures';
+import { GroundMist, NightMoon } from '../three/AtmosphericEffects';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Play,
@@ -24,11 +27,16 @@ import { horrorAudio } from '../audio/horrorAudio';
 const HauntedMenuDiorama: React.FC = () => {
   const lampRef = useRef<THREE.PointLight | null>(null);
   const camGroup = useRef<THREE.Group | null>(null);
+  const woodMat = React.useMemo(() => getWorldMaterial('wood_dark'), []);
+  const roofMat = React.useMemo(() => getWorldMaterial('roof'), []);
+  const stoneMat = React.useMemo(() => getWorldMaterial('stone'), []);
+  const dirtMat = React.useMemo(() => getWorldMaterial('dirt'), []);
+  const bambooMat = React.useMemo(() => getWorldMaterial('bamboo'), []);
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
     if (lampRef.current) {
-      lampRef.current.intensity = 6.5 + Math.sin(t * 7.5) * 0.9 + Math.sin(t * 17) * 0.4;
+      lampRef.current.intensity = 7.2 + Math.sin(t * 7.5) * 1.1 + Math.sin(t * 17) * 0.45;
     }
     if (camGroup.current) {
       camGroup.current.rotation.y = Math.sin(t * 0.14) * 0.16;
@@ -37,56 +45,58 @@ const HauntedMenuDiorama: React.FC = () => {
 
   return (
     <>
-      <color attach="background" args={['#060506']} />
-      <fog attach="fog" args={['#090707', 4, 18]} />
-      <ambientLight intensity={0.25} color="#768499" />
-      <directionalLight position={[6, 10, 5]} intensity={0.45} color="#8ba3c4" />
+      <color attach="background" args={['#050507']} />
+      <fog attach="fog" args={['#090708', 4, 20]} />
+      <hemisphereLight args={['#5e7699', '#1e140d', 0.4]} />
+      <directionalLight position={[6, 10, 5]} intensity={0.55} color="#8ba3c4" />
+      <NightMoon position={[8, 9, -18]} />
 
       <group ref={camGroup} position={[1.4, -1.1, -3.5]}>
         {/* Misty village ground */}
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} material={dirtMat}>
           <planeGeometry args={[28, 28]} />
-          <meshStandardMaterial color="#171410" roughness={0.95} />
         </mesh>
 
-        {/* Traditional 3-compartment wooden house silhouette */}
-        <mesh position={[0, 1.4, -2]}>
+        {/* Traditional 3-compartment wooden house with PBR textures */}
+        <mesh position={[0, 1.4, -2]} material={woodMat}>
           <boxGeometry args={[6.4, 2.8, 3.6]} />
-          <meshStandardMaterial color="#241710" roughness={0.9} />
         </mesh>
         {/* Pitched dark terracotta roof */}
-        <mesh position={[0, 3.45, -2]} rotation={[0, Math.PI / 4, 0]}>
+        <mesh position={[0, 3.45, -2]} rotation={[0, Math.PI / 4, 0]} material={roofMat}>
           <coneGeometry args={[5.2, 1.9, 4]} />
-          <meshStandardMaterial color="#2e1813" roughness={0.92} />
         </mesh>
-        {/* Glowing crimson doorway / window */}
+        {/* Glowing crimson doorway */}
         <mesh position={[0, 1.15, -0.18]}>
           <planeGeometry args={[1.15, 2.1]} />
-          <meshStandardMaterial color="#4a0f0f" emissive="#8f1d1d" emissiveIntensity={1.4} />
+          <meshStandardMaterial color="#590c0c" emissive="#b91c1c" emissiveIntensity={2.2} />
         </mesh>
-        {/* Flickering red lantern hanging on porch */}
+        {/* Flickering red lantern hanging on porch (blooms softly!) */}
         <mesh position={[-1.4, 2.1, -0.05]}>
-          <sphereGeometry args={[0.18, 12, 12]} />
-          <meshStandardMaterial color="#b91c1c" emissive="#dc2626" emissiveIntensity={2.2} />
+          <sphereGeometry args={[0.18, 14, 14]} />
+          <meshStandardMaterial color="#dc2626" emissive="#ef4444" emissiveIntensity={3.4} />
         </mesh>
-        <pointLight ref={lampRef} position={[-1.4, 2.0, 0.3]} color="#ea580c" intensity={6.5} distance={11} />
+        <pointLight ref={lampRef} position={[-1.4, 2.0, 0.3]} color="#ea580c" intensity={7.2} distance={12} />
 
-        {/* Stone well silhouette in front yard */}
-        <mesh position={[2.6, 0.45, 1.2]}>
-          <cylinderGeometry args={[0.72, 0.78, 0.9, 14]} />
-          <meshStandardMaterial color="#2c2b29" roughness={0.95} />
+        {/* Sculpted Stone Well silhouette */}
+        <mesh position={[2.6, 0.48, 1.2]} material={stoneMat}>
+          <cylinderGeometry args={[0.72, 0.78, 0.96, 18]} />
         </mesh>
 
         {/* Bamboo silhouettes */}
         {[-4.4, -3.9, 4.1, 4.7].map((x, idx) => (
-          <mesh key={idx} position={[x, 2.8, -0.5 + idx * 0.4]}>
+          <mesh key={idx} position={[x, 2.8, -0.5 + idx * 0.4]} material={bambooMat}>
             <cylinderGeometry args={[0.07, 0.09, 5.6, 8]} />
-            <meshStandardMaterial color="#192116" roughness={0.9} />
           </mesh>
         ))}
 
-        <Sparkles count={75} scale={[14, 5, 12]} position={[0, 2, 0]} size={2} speed={0.22} opacity={0.35} color="#d6c5a3" />
+        <GroundMist color="#8c9ba8" opacity={0.28} y={0.25} spread={10} />
+        <Sparkles count={85} scale={[14, 5, 12]} position={[0, 2, 0]} size={2} speed={0.22} opacity={0.38} color="#d6c5a3" />
       </group>
+
+      <EffectComposer multisampling={0}>
+        <Bloom mipmapBlur luminanceThreshold={0.8} intensity={0.75} />
+        <Vignette offset={0.25} darkness={0.7} />
+      </EffectComposer>
     </>
   );
 };
@@ -114,7 +124,11 @@ export const MainMenu: React.FC = () => {
     <div className="relative w-full h-full overflow-hidden bg-[#060506]">
       {/* Live 3D Misty House Background */}
       <div className="absolute inset-0">
-        <Canvas camera={{ position: [0, 1.35, 5.2], fov: 46 }}>
+        <Canvas
+          camera={{ position: [0, 1.35, 5.2], fov: 46 }}
+          dpr={[1, 1.5]}
+          gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.1 }}
+        >
           <HauntedMenuDiorama />
         </Canvas>
       </div>

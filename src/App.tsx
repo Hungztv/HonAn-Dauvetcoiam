@@ -1,10 +1,12 @@
 import React, { useCallback, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
+import * as THREE from 'three';
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from './store/gameStore';
 import { getLevelById } from './data/levels';
 import { LevelEnvironment } from './three/LevelEnvironment';
 import { FirstPersonController } from './three/FirstPersonController';
+import { HorrorPostProcessing } from './three/HorrorPostProcessing';
 import { MainMenu } from './components/MainMenu';
 import { HUD } from './components/HUD';
 import { InspectModal } from './components/InspectModal';
@@ -70,11 +72,17 @@ export function App() {
 
   return (
     <div ref={canvasContainerRef} className="relative w-full h-full bg-[#060505] overflow-hidden">
-      {/* Main 3D First-Person World Canvas */}
+      {/* Main 3D First-Person World Canvas with Unity-style ACES Filmic Tone Mapping & Post-FX */}
       <Canvas
         shadows={settings.graphicsQuality === 'high'}
-        camera={{ fov: 68, near: 0.1, far: 80 }}
-        dpr={settings.graphicsQuality === 'high' ? [1, 2] : [1, 1.25]}
+        camera={{ fov: 68, near: 0.1, far: 85 }}
+        dpr={settings.graphicsQuality === 'high' ? [1, 1.75] : [1, 1.2]}
+        gl={{
+          antialias: true,
+          toneMapping: THREE.ACESFilmicToneMapping,
+          toneMappingExposure: 1.12,
+          powerPreference: 'high-performance',
+        }}
         onClick={() => {
           if (overlay === 'none') {
             requestLock();
@@ -83,6 +91,7 @@ export function App() {
       >
         <LevelEnvironment level={level} />
         <FirstPersonController level={level} />
+        <HorrorPostProcessing />
       </Canvas>
 
       {/* In-game HUD */}

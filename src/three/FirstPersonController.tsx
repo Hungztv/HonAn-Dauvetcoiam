@@ -426,13 +426,15 @@ export const FirstPersonController: React.FC<FirstPersonControllerProps> = ({ le
   return (
     <spotLight
       ref={flashlightRef}
-      color="#fff1d6"
-      angle={0.46}
-      penumbra={0.62}
-      distance={22}
-      decay={1.45}
+      color="#fff0d4"
+      angle={0.48}
+      penumbra={0.68}
+      distance={24}
+      decay={1.4}
       intensity={flashlightOn ? 18 : 0}
       castShadow={settings.graphicsQuality === 'high'}
+      shadow-mapSize={[1024, 1024]}
+      shadow-bias={-0.0004}
     />
   );
 };

@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { LevelData, PuzzleStation, WorldDoor, WorldLamp } from '../types/game';
 import { getWorldMaterial, createCalligraphyTexture } from './proceduralTextures';
 import { EvidenceModel } from './EvidenceModels';
+import { VietnameseLevelSetpieces } from './VietnameseProps';
 import { useGameStore } from '../store/gameStore';
 import { horrorAudio } from '../audio/horrorAudio';
 
@@ -14,58 +15,105 @@ interface LevelEnvironmentProps {
 
 const FlickeringLamp: React.FC<{ lamp: WorldLamp; extinguished: boolean }> = ({ lamp, extinguished }) => {
   const lightRef = useRef<THREE.PointLight | null>(null);
+  const swayRef = useRef<THREE.Group | null>(null);
 
   useFrame((state) => {
+    const t = state.clock.elapsedTime;
+    if (swayRef.current && lamp.type === 'lantern') {
+      swayRef.current.rotation.z = Math.sin(t * 1.4 + lamp.position[0]) * 0.06;
+      swayRef.current.rotation.x = Math.cos(t * 1.1 + lamp.position[2]) * 0.04;
+    }
     if (!lightRef.current) return;
     if (extinguished) {
       lightRef.current.intensity = 0;
       return;
     }
     if (lamp.flicker) {
-      const t = state.clock.elapsedTime;
       const wave =
-        Math.sin(t * 7.2 + lamp.position[0]) * 0.12 +
-        Math.sin(t * 15.7 + lamp.position[2]) * 0.08;
-      lightRef.current.intensity = Math.max(0.2, lamp.intensity * (1 + wave));
+        Math.sin(t * 7.2 + lamp.position[0]) * 0.14 +
+        Math.sin(t * 15.7 + lamp.position[2]) * 0.09;
+      lightRef.current.intensity = Math.max(0.25, lamp.intensity * (1 + wave));
     }
   });
 
   return (
-    <group position={lamp.position}>
+    <group ref={swayRef} position={lamp.position}>
       <pointLight
         ref={lightRef}
         color={lamp.color}
         intensity={extinguished ? 0 : lamp.intensity}
         distance={lamp.distance}
-        decay={1.8}
+        decay={1.75}
       />
       {lamp.type === 'oil_lamp' && (
         <group>
-          <mesh position={[0, -0.1, 0]}>
-            <cylinderGeometry args={[0.07, 0.1, 0.12, 10]} />
-            <meshStandardMaterial color="#3b2619" roughness={0.7} />
+          {/* Brass & terracotta lamp base */}
+          <mesh position={[0, -0.11, 0]}>
+            <cylinderGeometry args={[0.075, 0.11, 0.13, 14]} />
+            <meshStandardMaterial color="#4a2e1a" roughness={0.55} metalness={0.35} />
           </mesh>
-          <mesh position={[0, 0.02, 0]}>
-            <cylinderGeometry args={[0.045, 0.055, 0.14, 10]} />
+          {/* Brass collar */}
+          <mesh position={[0, -0.03, 0]}>
+            <cylinderGeometry args={[0.055, 0.065, 0.04, 12]} />
+            <meshStandardMaterial color="#b58d3b" roughness={0.35} metalness={0.8} />
+          </mesh>
+          {/* Inner glowing flame core (triggers Bloom!) */}
+          {!extinguished && (
+            <mesh position={[0, 0.025, 0]}>
+              <sphereGeometry args={[0.028, 10, 10]} />
+              <meshStandardMaterial
+                color="#fff3c4"
+                emissive="#ff9524"
+                emissiveIntensity={4.5}
+              />
+            </mesh>
+          )}
+          {/* Glass chimney */}
+          <mesh position={[0, 0.06, 0]}>
+            <cylinderGeometry args={[0.042, 0.058, 0.19, 12]} />
             <meshStandardMaterial
-              color="#f5c97a"
+              color="#ffe4b5"
               emissive={extinguished ? '#000000' : '#ff8c24'}
-              emissiveIntensity={extinguished ? 0 : 1.5}
+              emissiveIntensity={extinguished ? 0 : 0.7}
               transparent
-              opacity={0.78}
+              opacity={0.42}
+              roughness={0.15}
             />
           </mesh>
         </group>
       )}
       {lamp.type === 'lantern' && (
-        <mesh>
-          <sphereGeometry args={[0.18, 12, 10]} />
-          <meshStandardMaterial
-            color="#a61c1c"
-            emissive={extinguished ? '#000000' : '#d6281c'}
-            emissiveIntensity={extinguished ? 0 : 1.8}
-          />
-        </mesh>
+        <group>
+          {/* Hanging cord */}
+          <mesh position={[0, 0.34, 0]}>
+            <cylinderGeometry args={[0.01, 0.01, 0.3, 6]} />
+            <meshStandardMaterial color="#1f1610" />
+          </mesh>
+          {/* Top & bottom lacquered caps */}
+          <mesh position={[0, 0.19, 0]}>
+            <cylinderGeometry args={[0.09, 0.12, 0.045, 12]} />
+            <meshStandardMaterial color="#2b170e" roughness={0.6} />
+          </mesh>
+          <mesh position={[0, -0.19, 0]}>
+            <cylinderGeometry args={[0.12, 0.09, 0.045, 12]} />
+            <meshStandardMaterial color="#2b170e" roughness={0.6} />
+          </mesh>
+          {/* Glowing crimson silk lantern body */}
+          <mesh scale={[1, 1.15, 1]}>
+            <sphereGeometry args={[0.17, 16, 14]} />
+            <meshStandardMaterial
+              color="#b91c1c"
+              emissive={extinguished ? '#000000' : '#ef3b2d'}
+              emissiveIntensity={extinguished ? 0 : 2.8}
+              roughness={0.6}
+            />
+          </mesh>
+          {/* Golden silk tassel */}
+          <mesh position={[0, -0.32, 0]}>
+            <coneGeometry args={[0.032, 0.22, 8]} />
+            <meshStandardMaterial color="#c99b3b" roughness={0.75} />
+          </mesh>
+        </group>
       )}
       {lamp.type === 'incense' && (
         <mesh>
@@ -73,7 +121,7 @@ const FlickeringLamp: React.FC<{ lamp: WorldLamp; extinguished: boolean }> = ({ 
           <meshStandardMaterial
             color="#ff511a"
             emissive={extinguished ? '#000000' : '#ff3300'}
-            emissiveIntensity={extinguished ? 0 : 2.2}
+            emissiveIntensity={extinguished ? 0 : 3.2}
           />
         </mesh>
       )}
@@ -324,32 +372,59 @@ const HorrorEntity: React.FC<{
     );
   }
 
-  // Shadow figure / faceless passenger silhouette (Vietnamese áo dài / conical silhouette)
+  // Shadow figure / faceless passenger sculpted silhouette (Vietnamese áo dài / conical hat)
   const isRedBride = anchor.id.includes('bride') || anchor.id.includes('co_do');
   return (
     <group ref={groupRef} position={anchor.position} rotation={[0, anchor.rotationY ?? 0, 0]}>
-      <mesh position={[0, 0.85, 0]}>
-        <coneGeometry args={[0.38, 1.65, 12]} />
+      {/* Draped lower skirt / robe */}
+      <mesh position={[0, 0.55, 0]} castShadow>
+        <cylinderGeometry args={[0.2, 0.42, 1.1, 14]} />
         <meshStandardMaterial
-          color={isRedBride ? '#4d0a0a' : '#080708'}
-          emissive={isRedBride ? '#2b0404' : '#000000'}
+          color={isRedBride ? '#590b0b' : '#09080a'}
+          emissive={isRedBride ? '#360505' : '#000000'}
           transparent
-          opacity={0.86}
-          roughness={0.95}
+          opacity={0.92}
+          roughness={0.88}
         />
       </mesh>
+      {/* Torso & shoulders */}
+      <mesh position={[0, 1.32, 0]} castShadow>
+        <cylinderGeometry args={[0.22, 0.19, 0.52, 12]} />
+        <meshStandardMaterial
+          color={isRedBride ? '#6b0f0f' : '#0b0a0d'}
+          emissive={isRedBride ? '#420606' : '#000000'}
+          roughness={0.85}
+        />
+      </mesh>
+      {/* Draped sleeves */}
+      <mesh position={[-0.26, 1.18, 0.04]} rotation={[0.1, 0, 0.2]}>
+        <cylinderGeometry args={[0.065, 0.11, 0.62, 8]} />
+        <meshStandardMaterial color={isRedBride ? '#590b0b' : '#09080a'} roughness={0.9} />
+      </mesh>
+      <mesh position={[0.26, 1.18, 0.04]} rotation={[0.1, 0, -0.2]}>
+        <cylinderGeometry args={[0.065, 0.11, 0.62, 8]} />
+        <meshStandardMaterial color={isRedBride ? '#590b0b' : '#09080a'} roughness={0.9} />
+      </mesh>
+      {/* Head */}
       <mesh position={[0, 1.72, 0]}>
-        <sphereGeometry args={[0.16, 12, 12]} />
+        <sphereGeometry args={[0.145, 14, 14]} />
         <meshStandardMaterial
-          color={anchor.type === 'faceless_passenger' ? '#c9bfa8' : '#090809'}
-          transparent
-          opacity={0.9}
+          color={anchor.type === 'faceless_passenger' ? '#d4cab5' : isRedBride ? '#c4bdb0' : '#0a090c'}
+          roughness={0.75}
         />
       </mesh>
+      {/* Long tangled dark hair shroud for female ghost / shadow */}
+      {anchor.type !== 'faceless_passenger' && (
+        <mesh position={[0, 1.56, -0.04]}>
+          <cylinderGeometry args={[0.16, 0.24, 0.58, 12]} />
+          <meshStandardMaterial color="#050406" roughness={0.95} />
+        </mesh>
+      )}
+      {/* Conical Vietnamese hat (Nón lá) for Ferryboat passengers */}
       {anchor.type === 'faceless_passenger' && (
-        <mesh position={[0, 1.9, 0]}>
-          <coneGeometry args={[0.36, 0.18, 16]} />
-          <meshStandardMaterial color="#6e5c3e" roughness={0.95} />
+        <mesh position={[0, 1.88, 0]} castShadow>
+          <coneGeometry args={[0.42, 0.22, 20]} />
+          <meshStandardMaterial color="#6e5a3b" roughness={0.95} />
         </mesh>
       )}
     </group>
@@ -507,14 +582,20 @@ export const LevelEnvironment: React.FC<LevelEnvironmentProps> = ({ level }) => 
       <color attach="background" args={[level.skyColor]} />
       <fog attach="fog" args={[level.fogColor, level.fogNear, level.fogFar]} />
 
-      {/* Subtle moonlight + dark ambient fill */}
-      <ambientLight color={level.ambientLightColor} intensity={level.ambientLightIntensity} />
+      {/* Cool moonlight top + warm earthy ground hemisphere bounce + moon directional shadow */}
+      <hemisphereLight args={['#5e7699', '#24170f', 0.45]} />
+      <ambientLight color={level.ambientLightColor} intensity={level.ambientLightIntensity * 0.75} />
       <directionalLight
         position={[12, 22, 8]}
-        intensity={0.42}
-        color="#7b92b5"
+        intensity={0.52}
+        color="#8aa8d1"
         castShadow
+        shadow-mapSize={[1024, 1024]}
+        shadow-bias={-0.0005}
       />
+
+      {/* Unity-grade sculpted Vietnamese architectural setpieces, animated water, incense smoke & ground mist */}
+      <VietnameseLevelSetpieces levelId={level.id} />
 
       {/* Atmospheric floating dust / incense ash / river mist particles */}
       <Sparkles
