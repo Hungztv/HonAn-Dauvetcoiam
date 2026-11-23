@@ -18,7 +18,7 @@ export const HorrorPostProcessing: React.FC = () => {
   const reduceFlashing = useGameStore((s) => s.settings.reduceFlashing);
   const currentLevelId = useGameStore((s) => s.currentLevelId);
   const supernaturalGlitch = useGameStore((s) => s.supernaturalGlitch);
-  const activeJumpscare = useGameStore((s) => s.activeJumpscare);
+  const activePhysicalJumpscare = useGameStore((s) => s.activePhysicalJumpscare);
 
   const profile = QUALITY_PROFILES[graphicsQuality];
   const levelVisual = LEVEL_VISUAL_PROFILES[currentLevelId] ?? LEVEL_VISUAL_PROFILES[1];
@@ -26,14 +26,14 @@ export const HorrorPostProcessing: React.FC = () => {
 
   // Visual Standard v4.5: Razor-sharp (0 aberration) during calm exploration; spikes only on supernatural anomalies/jumpscares
   const aberrationOffset = useMemo(() => {
-    const spike = activeJumpscare
+    const spike = activePhysicalJumpscare
       ? reduceFlashing
         ? 0.0025
-        : 0.008
+        : 0.0075
       : supernaturalGlitch * (reduceFlashing ? 0.0018 : 0.0042);
     const strength = pp.restingChromaticAberration + spike;
     return new THREE.Vector2(strength, strength * 0.7);
-  }, [activeJumpscare, supernaturalGlitch, reduceFlashing, pp.restingChromaticAberration]);
+  }, [activePhysicalJumpscare, supernaturalGlitch, reduceFlashing, pp.restingChromaticAberration]);
 
   if (!profile.enablePostProcessing) {
     return null;

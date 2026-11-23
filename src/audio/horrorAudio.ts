@@ -591,37 +591,41 @@ class HorrorAudioEngine {
     osc.stop(now + 0.3);
   }
 
-  /** High-impact procedural horror jumpscare sting (sub-bass slam + spectral shriek + static burst + heartbeat) */
-  public playJumpscare(variant: 'pale_bride' | 'statue_face' | 'faceless_ferryman' | 'blood_hands' = 'pale_bride') {
+  /** High-impact 3D positional horror jumpscare sting emitted from exact NPC world position */
+  public playJumpscare(
+    variant: 'pale_bride' | 'statue_face' | 'faceless_ferryman' | 'blood_hands' = 'pale_bride',
+    pos?: Vec3
+  ) {
     this.init();
     if (!this.ctx || !this.masterGain) return;
     const now = this.ctx.currentTime;
+    const dest = this.createPanner(pos, 'sfx');
 
-    // 1. Massive sub-bass slam
+    // 1. Massive sub-bass impact
     const sub = this.ctx.createOscillator();
     sub.type = 'sine';
-    sub.frequency.setValueAtTime(92, now);
+    sub.frequency.setValueAtTime(88, now);
     sub.frequency.exponentialRampToValueAtTime(26, now + 0.55);
     const subGain = this.ctx.createGain();
-    subGain.gain.setValueAtTime(0.85, now);
+    subGain.gain.setValueAtTime(0.82, now);
     subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
     sub.connect(subGain);
-    subGain.connect(this.masterGain);
+    subGain.connect(this.sfxGain ?? this.masterGain);
     sub.start(now);
     sub.stop(now + 0.7);
 
-    // 2. Dissonant spectral shriek / metallic screech cluster
+    // 2. Spatialized spectral shriek / wood slam from NPC's 3D location
     const freqs =
       variant === 'pale_bride'
         ? [587, 622, 1175, 1245]
         : variant === 'statue_face'
-        ? [220, 233, 466, 880]
+        ? [210, 224, 440, 830]
         : variant === 'faceless_ferryman'
         ? [185, 261, 523, 740]
         : [311, 330, 932, 987];
 
     freqs.forEach((f, idx) => {
-      if (!this.ctx || !this.masterGain) return;
+      if (!this.ctx) return;
       const osc = this.ctx.createOscillator();
       osc.type = idx % 2 === 0 ? 'sawtooth' : 'square';
       osc.frequency.setValueAtTime(f * 1.08, now);
@@ -639,12 +643,12 @@ class HorrorAudioEngine {
 
       osc.connect(bp);
       bp.connect(g);
-      g.connect(this.masterGain);
+      g.connect(dest);
       osc.start(now);
       osc.stop(now + 0.85);
     });
 
-    // 3. Harsh burst of distorted static / breath rush
+    // 3. Harsh burst of spatial static / breath rush
     if (this.noiseBuffer) {
       const noise = this.ctx.createBufferSource();
       noise.buffer = this.noiseBuffer;
@@ -652,16 +656,61 @@ class HorrorAudioEngine {
       hp.type = 'highpass';
       hp.frequency.value = 950;
       const ng = this.ctx.createGain();
-      ng.gain.setValueAtTime(0.55, now);
+      ng.gain.setValueAtTime(0.5, now);
       ng.gain.exponentialRampToValueAtTime(0.001, now + 0.52);
       noise.connect(hp);
       hp.connect(ng);
-      ng.connect(this.masterGain);
+      ng.connect(dest);
       noise.start(now, 0, 0.55);
     }
 
     // 4. Rapid pounding heartbeat aftermath
     this.playHeartbeat(5, 0.65);
+  }
+
+  /** 3D Positional heavy raspy breathing emitted from NPC coordinates */
+  public playSpatialBreathing(pos: Vec3) {
+    this.init();
+    if (!this.ctx || !this.noiseBuffer) return;
+    const now = this.ctx.currentTime;
+    const dest = this.createPanner(pos, 'sfx');
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = this.noiseBuffer;
+    const bp = this.ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(620, now);
+    bp.frequency.linearRampToValueAtTime(380, now + 0.9);
+    bp.Q.value = 2.8;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.22, now + 0.28);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 1.05);
+    noise.connect(bp);
+    bp.connect(g);
+    g.connect(dest);
+    noise.start(now, Math.random() * 1.2, 1.1);
+  }
+
+  /** 3D Positional eerie cloth/wind disappearance whoosh */
+  public playSpatialDisappear(pos: Vec3) {
+    this.init();
+    if (!this.ctx || !this.noiseBuffer) return;
+    const now = this.ctx.currentTime;
+    const dest = this.createPanner(pos, 'sfx');
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = this.noiseBuffer;
+    const bp = this.ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(1400, now);
+    bp.frequency.exponentialRampToValueAtTime(190, now + 0.65);
+    bp.Q.value = 1.8;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.28, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.68);
+    noise.connect(bp);
+    bp.connect(g);
+    g.connect(dest);
+    noise.start(now, 0.2, 0.72);
   }
 
   public playHeartbeat(beats = 4, delaySec = 0) {

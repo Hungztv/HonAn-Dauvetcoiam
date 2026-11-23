@@ -8,6 +8,7 @@ import { EvidenceModel } from './EvidenceModels';
 import { VietnameseLevelSetpieces } from './VietnameseProps';
 import { QUALITY_PROFILES, assetPipeline } from './AssetPipeline';
 import { VISUAL_STANDARD } from './VisualStandard';
+import { NPCBehaviorDirector } from '../horror/npc/NPCBehaviorDirector';
 import { useGameStore } from '../store/gameStore';
 import { horrorAudio } from '../audio/horrorAudio';
 
@@ -476,8 +477,7 @@ export const LevelEnvironment: React.FC<LevelEnvironmentProps> = ({ level }) => 
   const overlay = useGameStore((s) => s.overlay);
   const screen = useGameStore((s) => s.screen);
   const triggerHorrorEvent = useGameStore((s) => s.triggerHorrorEvent);
-  const triggerJumpscare = useGameStore((s) => s.triggerJumpscare);
-  const markZoneScareTriggered = useGameStore((s) => s.markZoneScareTriggered);
+  const requestPhysicalJumpscare = useGameStore((s) => s.requestPhysicalJumpscare);
   const clearWhisper = useGameStore((s) => s.clearWhisper);
   const setPerfStats = useGameStore((s) => s.setPerfStats);
 
@@ -539,45 +539,7 @@ export const LevelEnvironment: React.FC<LevelEnvironmentProps> = ({ level }) => 
       }
     }
 
-    // 1. Story-driven Location / Proximity Jumpscare Zones per Level (fires once each!)
-    const px = camera.position.x;
-    const pz = camera.position.z;
-
-    if (level.id === 1) {
-      if (pz > 5.8 && Math.abs(px) < 2.6 && markZoneScareTriggered('l1_well_scare')) {
-        triggerJumpscare('blood_hands', '“CON ƠI... ĐỪNG LẠI GẦN GIẾNG!”', true);
-      }
-      if (px > 4.2 && pz < 1.5 && markZoneScareTriggered('l1_sealed_scare')) {
-        triggerJumpscare('pale_bride', '“AI DÁM XÉ BÙA BUỒNG ĐÔNG 1988?!”', true);
-      }
-    } else if (level.id === 2) {
-      if (px < -3.5 && pz > 0.8 && pz < 4.8 && markZoneScareTriggered('l2_banyan_scare')) {
-        triggerJumpscare('pale_bride', '“ÁO ĐỎ ĐÂY RỒI... KIỆU HOA ĐÂU?!”', true);
-      }
-      if (pz < -6.8 && markZoneScareTriggered('l2_inner_scare')) {
-        triggerJumpscare('pale_bride', '“TRẢ LẠI TÊN CHO ĐÀO THỊ MÂY!”', true);
-      }
-    } else if (level.id === 3) {
-      if (Math.hypot(px, pz) < 2.9 && markZoneScareTriggered('l3_well_scare')) {
-        triggerJumpscare('blood_hands', '“18/08/1978... SAO CHỈ KÉO MỘT GIỎ LÊN?!”', true);
-      }
-      if (pz < -6.3 && Math.abs(px) < 3.5 && markZoneScareTriggered('l3_headman_scare')) {
-        triggerJumpscare('faceless_ferryman', '“NGƯƠI BIẾT HUYẾT THỐNG CỦA MÌNH RỒI SAO?!”', true);
-      }
-    } else if (level.id === 4) {
-      if (Math.abs(px) > 5.2 && pz < 5.5 && pz > -4.0 && markZoneScareTriggered('l4_statue_scare')) {
-        triggerJumpscare('statue_face', '“ĐỪNG QUAY LƯNG LẠI VỚI CHÚNG TA!”', true);
-      }
-      if (pz < -7.2 && markZoneScareTriggered('l4_sanctum_scare')) {
-        triggerJumpscare('statue_face', '“SẮC PHONG 1958 ĐÃ BỊ TRÁO!”', true);
-      }
-    } else if (level.id === 5) {
-      if (pz < -4.8 && markZoneScareTriggered('l5_boat_scare')) {
-        triggerJumpscare('faceless_ferryman', '“ĐÒ NHỔ SÀO RỒI... HÃY PHÁN QUYẾT ĐI!”', true);
-      }
-    }
-
-    // 2. Periodic Dynamic Psychological Horror + Moral-Choice-Reactive Events
+    // Periodic Dynamic Psychological Horror + Moral-Choice-Reactive 3D NPC Ambushes
     eventTimerRef.current -= delta * (0.7 + horrorIntensity * 1.15);
     if (eventTimerRef.current <= 0) {
       eventTimerRef.current = 14 + Math.random() * 14;
@@ -600,18 +562,24 @@ export const LevelEnvironment: React.FC<LevelEnvironmentProps> = ({ level }) => 
         whisperPool[Math.floor(Math.random() * whisperPool.length)] ??
         'Có ai đó đang đứng sau lưng bạn...';
 
-      const ambushChance = narrative.spiritScore < 0 ? 0.28 : 0.18;
+      const ambushChance = narrative.spiritScore < 0 ? 0.24 : 0.14;
 
-      if (roll < ambushChance && horrorIntensity >= 0.4) {
-        const variantByLevel =
-          level.id === 1 || level.id === 2
-            ? 'pale_bride'
+      if (roll < ambushChance && horrorIntensity >= 0.42) {
+        const npcByLevel =
+          level.id === 1
+            ? 'tran_thi_lien'
+            : level.id === 2
+            ? narrative.moralChoices.fate_dao_thi_may === 'release'
+              ? null
+              : 'dao_thi_may'
             : level.id === 3
-            ? 'blood_hands'
+            ? 'child_spirit'
             : level.id === 4
-            ? 'statue_face'
-            : 'faceless_ferryman';
-        triggerJumpscare(variantByLevel, whisper, false);
+            ? 'wooden_statue'
+            : 'faceless_passenger';
+        if (npcByLevel) {
+          requestPhysicalJumpscare(npcByLevel, whisper, false);
+        }
       } else if (roll < 0.44) {
         horrorAudio.playFootstep('wood', false, behindPos);
         setTimeout(() => horrorAudio.playFootstep('wood', false, behindPos), 520);
@@ -771,9 +739,9 @@ export const LevelEnvironment: React.FC<LevelEnvironmentProps> = ({ level }) => 
         );
       })}
 
-      {/* Dynamic Psychological Horror Entities (including NG+ early Ferryman apparition!) */}
+      {/* Wall Blood Inscriptions (3D text anchors) */}
       {level.horrorAnchors
-        .filter((anchor) => !anchor.ngPlusOnly || narrative.isNewGamePlus)
+        .filter((anchor) => anchor.type === 'wall_script' && (!anchor.ngPlusOnly || narrative.isNewGamePlus))
         .map((anchor) => (
           <HorrorEntity
             key={anchor.id}
@@ -782,6 +750,9 @@ export const LevelEnvironment: React.FC<LevelEnvironmentProps> = ({ level }) => 
             flashlightOn={flashlightOn}
           />
         ))}
+
+      {/* HỒN ÁN v4.5.2 — Full-Body 3D Horror NPC & Physical 3D Jumpscare Director */}
+      <NPCBehaviorDirector level={level} />
     </>
   );
 };

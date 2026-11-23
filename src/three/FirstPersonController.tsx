@@ -28,7 +28,7 @@ export const FirstPersonController: React.FC<FirstPersonControllerProps> = ({ le
   const flashlightOn = useGameStore((s) => s.flashlightOn);
   const horrorIntensity = useGameStore((s) => s.horrorIntensity);
   const supernaturalGlitch = useGameStore((s) => s.supernaturalGlitch);
-  const activeJumpscare = useGameStore((s) => s.activeJumpscare);
+  const activePhysicalJumpscare = useGameStore((s) => s.activePhysicalJumpscare);
   const settings = useGameStore((s) => s.settings);
   const progress = useGameStore((s) => s.progressByLevel[level.id]);
 
@@ -263,13 +263,37 @@ export const FirstPersonController: React.FC<FirstPersonControllerProps> = ({ le
 
     drainFlashlight(delta);
 
-    // Apply camera orientation (with camera shake during jumpscare if enabled in Settings)
+    // Brief smooth Camera Look-At pull toward the physical 3D NPC during first 0.5s of a 3D jumpscare
+    // (never locks out player control or corrupts yaw/pitch!)
+    if (activePhysicalJumpscare && overlay === 'none') {
+      const elapsedSec = (Date.now() - activePhysicalJumpscare.startedAt) / 1000;
+      if (elapsedSec < 0.52) {
+        const [tx, ty, tz] = activePhysicalJumpscare.lookAtTarget;
+        const dx = tx - camera.position.x;
+        const dy = ty - camera.position.y;
+        const dz = tz - camera.position.z;
+        const horiz = Math.hypot(dx, dz) || 0.001;
+        const desiredYaw = Math.atan2(-dx, -dz);
+        const desiredPitch = THREE.MathUtils.clamp(Math.atan2(dy, horiz), -0.6, 0.5);
+
+        // Shortest-angle delta lerp
+        let diffYaw = desiredYaw - yaw.current;
+        while (diffYaw > Math.PI) diffYaw -= Math.PI * 2;
+        while (diffYaw < -Math.PI) diffYaw += Math.PI * 2;
+
+        const pull = Math.min(1, delta * 9.5);
+        yaw.current += diffYaw * pull;
+        pitch.current = THREE.MathUtils.lerp(pitch.current, desiredPitch, pull);
+      }
+    }
+
+    // Apply camera orientation (with controlled camera shake during 3D jumpscare if enabled in Settings)
     camera.rotation.order = 'YXZ';
-    if (activeJumpscare && settings.cameraShake) {
-      const t = state.clock.elapsedTime * 55;
-      camera.rotation.y = yaw.current + Math.sin(t) * 0.065;
-      camera.rotation.x = pitch.current + Math.cos(t * 1.3) * 0.055;
-      camera.rotation.z = Math.sin(t * 0.9) * 0.08;
+    if (activePhysicalJumpscare && settings.cameraShake) {
+      const t = state.clock.elapsedTime * 52;
+      camera.rotation.y = yaw.current + Math.sin(t) * 0.045;
+      camera.rotation.x = pitch.current + Math.cos(t * 1.3) * 0.038;
+      camera.rotation.z = Math.sin(t * 0.9) * 0.055;
     } else {
       camera.rotation.y = yaw.current;
       camera.rotation.x = pitch.current;
@@ -416,8 +440,8 @@ export const FirstPersonController: React.FC<FirstPersonControllerProps> = ({ le
       flashlightRef.current.target = flashlightTarget;
 
       let intensity = flashlightOn ? VISUAL_STANDARD.lighting.flashlightIntensity : 0;
-      if (activeJumpscare && !settings.reduceFlashing) {
-        intensity = Math.sin(state.clock.elapsedTime * 75) > 0 ? 32 : 0;
+      if (activePhysicalJumpscare && !settings.reduceFlashing) {
+        intensity = Math.sin(state.clock.elapsedTime * 68) > 0 ? 30 : 4;
       } else if (flashlightOn && !settings.reduceFlashing && (horrorIntensity > 0.45 || supernaturalGlitch > 0.15)) {
         const flickerNoise = Math.sin(state.clock.elapsedTime * 37) * Math.sin(state.clock.elapsedTime * 19);
         if (flickerNoise > 0.85 - supernaturalGlitch * 0.4) {

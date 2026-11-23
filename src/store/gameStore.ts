@@ -23,6 +23,8 @@ import {
   unlockCoreTruth,
 } from '../data/narrativePack';
 import { horrorAudio } from '../audio/horrorAudio';
+import { NPCCharacterType } from '../horror/npc/NPCStateMachine';
+import { PhysicalJumpscareEvent } from '../horror/jumpscare/PhysicalJumpscareDirector';
 
 export const SAVE_KEY = 'hon_an_save_v1';
 export const SAVE_SCHEMA_VERSION = 4;
@@ -257,17 +259,21 @@ interface GameState {
   targetedInteractable: TargetInteractable | null;
   perfStats: PerfStats;
 
-  // Dynamic Horror & Jumpscare state
+  // Dynamic Horror & Physical 3D Jumpscare state
   horrorIntensity: number;
   activeWhisper: string | null;
   supernaturalGlitch: number;
   extinguishedLampIds: string[];
-  activeJumpscare: {
-    variant: JumpscareVariant;
+  activePhysicalJumpscare: PhysicalJumpscareEvent | null;
+  pendingPhysicalScareRequest: {
+    npcType: NPCCharacterType;
     caption: string;
-    startedAt: number;
+    force?: boolean;
   } | null;
-  pendingJumpscare: { variant: JumpscareVariant; caption: string } | null;
+  pendingPostInspectScare: {
+    npcType: NPCCharacterType;
+    caption: string;
+  } | null;
   lastJumpscareAt: number;
   triggeredZoneScares: string[];
 
@@ -313,10 +319,12 @@ interface GameState {
   closePuzzle: () => void;
   markPuzzleSolved: (puzzleId: string) => void;
 
-  // Horror Actions
+  // Horror Actions (3D Physical NPC Jumpscare Pipeline)
   triggerHorrorEvent: (whisperText: string, glitchStrength?: number, lampToSnuff?: string) => void;
-  triggerJumpscare: (variant: JumpscareVariant, caption: string, force?: boolean) => void;
-  queuePostInspectJumpscare: (variant: JumpscareVariant, caption: string) => void;
+  triggerPhysicalJumpscare: (event: PhysicalJumpscareEvent, force?: boolean) => boolean;
+  requestPhysicalJumpscare: (npcType: NPCCharacterType, caption: string, force?: boolean) => void;
+  consumePendingPhysicalScare: () => { npcType: NPCCharacterType; caption: string; force?: boolean } | null;
+  queuePostInspectScare: (npcType: NPCCharacterType, caption: string) => void;
   markZoneScareTriggered: (zoneKey: string) => boolean;
   clearJumpscare: () => void;
   decayGlitch: (delta: number) => void;
@@ -373,8 +381,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   activeWhisper: null,
   supernaturalGlitch: 0,
   extinguishedLampIds: [],
-  activeJumpscare: null,
-  pendingJumpscare: null,
+  activePhysicalJumpscare: null,
+  pendingPhysicalScareRequest: null,
+  pendingPostInspectScare: null,
   lastJumpscareAt: 0,
   triggeredZoneScares: [],
 
@@ -543,7 +552,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       inspectingEvidenceId: null,
       activePuzzleId: null,
       targetedInteractable: null,
-      activeJumpscare: null,
+      activePhysicalJumpscare: null,
+      pendingPhysicalScareRequest: null,
     });
   },
 
@@ -552,7 +562,11 @@ export const useGameStore = create<GameState>((set, get) => ({
       document.exitPointerLock();
     }
     horrorAudio.setPaused(overlay === 'pause');
-    set({ overlay });
+    // Immediately cancel any active physical jumpscare when a modal/pause menu opens
+    set({
+      overlay,
+      ...(overlay !== 'none' ? { activePhysicalJumpscare: null } : {}),
+    });
   },
 
   setJournalTab: (journalTab) => set({ journalTab }),
@@ -653,13 +667,13 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   closeInspect: () => {
-    const pending = get().pendingJumpscare;
-    set({ overlay: 'none', inspectingEvidenceId: null, pendingJumpscare: null });
+    const pending = get().pendingPostInspectScare;
+    set({ overlay: 'none', inspectingEvidenceId: null, pendingPostInspectScare: null });
     if (pending && get().settings.enableJumpscares) {
       setTimeout(() => {
         const s = get();
         if (s.screen === 'playing' && s.overlay === 'none') {
-          s.triggerJumpscare(pending.variant, pending.caption);
+          s.requestPhysicalJumpscare(pending.npcType, pending.caption, false);
         }
       }, 1350);
     }
@@ -678,17 +692,17 @@ export const useGameStore = create<GameState>((set, get) => ({
     prog.discoveredHotspotIds = [...prog.discoveredHotspotIds, hotspotId];
     horrorAudio.playHotspotFound();
 
-    const scareMap: Record<string, { variant: JumpscareVariant; caption: string }> = {
-      l1_hs_comb_hair: { variant: 'blood_hands', caption: '“CON ƠI... ĐỪNG QUAY LẠI...”' },
-      l1_hs_photo_front: { variant: 'pale_bride', caption: '“SAO ÔNG LẠI NIÊM PHONG TÔI TRONG BUỒNG ĐÔNG?!”' },
-      l2_hs_doll_pin: { variant: 'pale_bride', caption: '“ĐỪNG RÚT KIM RA...”' },
-      l3_hs_rope_cut: { variant: 'blood_hands', caption: '“CHÚNG ĐÃ THẢ EM XUỐNG GIẾNG...”' },
-      l4_hs_relief_front: { variant: 'statue_face', caption: '“NHÌN RA SAU LƯNG NGƯƠI KIA...”' },
-      l5_hs_token_name: { variant: 'faceless_ferryman', caption: '“ĐẾN LƯỢT NGƯƠI PHÁN QUYẾT RỒI!”' },
+    const scareMap: Record<string, { npcType: NPCCharacterType; caption: string }> = {
+      l1_hs_comb_hair: { npcType: 'tran_thi_lien', caption: '“CON ƠI... ĐỪNG QUAY LẠI...”' },
+      l1_hs_photo_front: { npcType: 'tran_thi_lien', caption: '“SAO ÔNG LẠI NIÊM PHONG TÔI TRONG BUỒNG ĐÔNG?!”' },
+      l2_hs_doll_pin: { npcType: 'dao_thi_may', caption: '“ĐỪNG RÚT KIM RA...”' },
+      l3_hs_rope_cut: { npcType: 'child_spirit', caption: '“18/08/1978... SAO CHỈ KÉO MỘT GIỎ LÊN?!”' },
+      l4_hs_relief_front: { npcType: 'wooden_statue', caption: '“NHÌN RA SAU LƯNG NGƯƠI KIA...”' },
+      l5_hs_token_name: { npcType: 'faceless_passenger', caption: '“ĐẾN LƯỢT NGƯƠI PHÁN QUYẾT RỒI!”' },
     };
     const queuedScare = scareMap[hotspotId];
     if (queuedScare) {
-      state.queuePostInspectJumpscare(queuedScare.variant, queuedScare.caption);
+      state.queuePostInspectScare(queuedScare.npcType, queuedScare.caption);
     }
 
     if (hs.unlocksClueId && !prog.unlockedClueIds.includes(hs.unlocksClueId)) {
@@ -978,8 +992,22 @@ export const useGameStore = create<GameState>((set, get) => ({
     }));
   },
 
-  queuePostInspectJumpscare: (variant, caption) => {
-    set({ pendingJumpscare: { variant, caption } });
+  queuePostInspectScare: (npcType, caption) => {
+    set({ pendingPostInspectScare: { npcType, caption } });
+  },
+
+  requestPhysicalJumpscare: (npcType, caption, force = false) => {
+    const state = get();
+    if (!state.settings.enableJumpscares) return;
+    if (state.screen !== 'playing' || state.overlay !== 'none') return;
+    set({ pendingPhysicalScareRequest: { npcType, caption, force } });
+  },
+
+  consumePendingPhysicalScare: () => {
+    const req = get().pendingPhysicalScareRequest;
+    if (!req) return null;
+    set({ pendingPhysicalScareRequest: null });
+    return req;
   },
 
   markZoneScareTriggered: (zoneKey) => {
@@ -989,30 +1017,30 @@ export const useGameStore = create<GameState>((set, get) => ({
     return true;
   },
 
-  triggerJumpscare: (variant, caption, force = false) => {
+  triggerPhysicalJumpscare: (event, force = false) => {
     const state = get();
-    if (!state.settings.enableJumpscares) return;
-    if (state.screen !== 'playing' || state.overlay !== 'none') return;
+    if (!state.settings.enableJumpscares) return false;
+    if (state.screen !== 'playing' || state.overlay !== 'none') return false;
     const now = Date.now();
-    if (!force && now - state.lastJumpscareAt < 34000) return;
+    if (!force && now - state.lastJumpscareAt < 34000) return false;
 
-    horrorAudio.playJumpscare(variant);
     set({
-      activeJumpscare: { variant, caption, startedAt: now },
+      activePhysicalJumpscare: event,
       lastJumpscareAt: now,
-      supernaturalGlitch: state.settings.reduceFlashing ? 0.35 : 0.95,
-      activeWhisper: caption,
+      supernaturalGlitch: state.settings.reduceFlashing ? 0.35 : 0.92,
+      activeWhisper: event.caption,
     });
 
     setTimeout(() => {
-      const cur = get().activeJumpscare;
-      if (cur && cur.startedAt === now) {
-        set({ activeJumpscare: null });
+      const cur = get().activePhysicalJumpscare;
+      if (cur && cur.id === event.id) {
+        set({ activePhysicalJumpscare: null });
       }
-    }, 950);
+    }, event.durationMs);
+    return true;
   },
 
-  clearJumpscare: () => set({ activeJumpscare: null }),
+  clearJumpscare: () => set({ activePhysicalJumpscare: null, pendingPhysicalScareRequest: null }),
 
   decayGlitch: (delta) => {
     const g = get().supernaturalGlitch;
