@@ -11,49 +11,57 @@ import { BlendFunction } from 'postprocessing';
 import * as THREE from 'three';
 import { useGameStore } from '../store/gameStore';
 import { QUALITY_PROFILES } from './AssetPipeline';
+import { LEVEL_VISUAL_PROFILES, VISUAL_STANDARD } from './VisualStandard';
 
 export const HorrorPostProcessing: React.FC = () => {
   const graphicsQuality = useGameStore((s) => s.settings.graphicsQuality);
   const reduceFlashing = useGameStore((s) => s.settings.reduceFlashing);
+  const currentLevelId = useGameStore((s) => s.currentLevelId);
   const supernaturalGlitch = useGameStore((s) => s.supernaturalGlitch);
-  const horrorIntensity = useGameStore((s) => s.horrorIntensity);
   const activeJumpscare = useGameStore((s) => s.activeJumpscare);
 
   const profile = QUALITY_PROFILES[graphicsQuality];
+  const levelVisual = LEVEL_VISUAL_PROFILES[currentLevelId] ?? LEVEL_VISUAL_PROFILES[1];
+  const pp = VISUAL_STANDARD.postProcessing;
 
+  // Visual Standard v4.5: Razor-sharp (0 aberration) during calm exploration; spikes only on supernatural anomalies/jumpscares
   const aberrationOffset = useMemo(() => {
-    const base = reduceFlashing ? 0.0004 : 0.0006;
     const spike = activeJumpscare
       ? reduceFlashing
-        ? 0.003
-        : 0.009
-      : supernaturalGlitch * (reduceFlashing ? 0.002 : 0.0045) + horrorIntensity * 0.0009;
-    const strength = base + spike;
+        ? 0.0025
+        : 0.008
+      : supernaturalGlitch * (reduceFlashing ? 0.0018 : 0.0042);
+    const strength = pp.restingChromaticAberration + spike;
     return new THREE.Vector2(strength, strength * 0.7);
-  }, [activeJumpscare, supernaturalGlitch, horrorIntensity, reduceFlashing]);
+  }, [activeJumpscare, supernaturalGlitch, reduceFlashing, pp.restingChromaticAberration]);
 
   if (!profile.enablePostProcessing) {
     return null;
   }
 
-  // MEDIUM preset: lightweight Bloom + Vignette only for high FPS on integrated GPUs
+  // MEDIUM preset: lightweight restrained Bloom + Vignette for integrated GPUs
   if (!profile.fullPostProcessing) {
     return (
       <EffectComposer multisampling={0}>
-        <Bloom mipmapBlur luminanceThreshold={0.85} luminanceSmoothing={0.3} intensity={0.5} />
-        <Vignette eskil={false} offset={0.24} darkness={0.65} />
+        <Bloom
+          mipmapBlur
+          luminanceThreshold={pp.bloomThreshold}
+          luminanceSmoothing={pp.bloomSmoothing}
+          intensity={pp.bloomIntensityMedium}
+        />
+        <Vignette eskil={false} offset={pp.vignetteOffset} darkness={0.64} />
       </EffectComposer>
     );
   }
 
-  // HIGH / ULTRA preset: selective cinematic Bloom + subtle Chromatic + Grain + Contrast grading
+  // HIGH / ULTRA preset: restrained realistic Bloom + per-level contrast grading + fine grain + reactive chromatic aberration
   return (
     <EffectComposer multisampling={0}>
       <Bloom
         mipmapBlur
-        luminanceThreshold={0.82}
-        luminanceSmoothing={0.35}
-        intensity={graphicsQuality === 'ultra' ? 0.74 : 0.62}
+        luminanceThreshold={pp.bloomThreshold}
+        luminanceSmoothing={pp.bloomSmoothing}
+        intensity={graphicsQuality === 'ultra' ? pp.bloomIntensityUltra : pp.bloomIntensityHigh}
       />
       <ChromaticAberration
         blendFunction={BlendFunction.NORMAL}
@@ -62,11 +70,11 @@ export const HorrorPostProcessing: React.FC = () => {
         modulationOffset={0.15}
       />
       <BrightnessContrast
-        brightness={-0.02}
-        contrast={graphicsQuality === 'ultra' ? 0.09 : 0.06}
+        brightness={levelVisual.brightnessOffset}
+        contrast={levelVisual.contrastBoost}
       />
-      <Noise opacity={0.036} premultiply blendFunction={BlendFunction.ADD} />
-      <Vignette eskil={false} offset={0.22} darkness={0.72} />
+      <Noise opacity={pp.filmGrainOpacity} premultiply blendFunction={BlendFunction.ADD} />
+      <Vignette eskil={false} offset={pp.vignetteOffset} darkness={pp.vignetteDarkness} />
     </EffectComposer>
   );
 };

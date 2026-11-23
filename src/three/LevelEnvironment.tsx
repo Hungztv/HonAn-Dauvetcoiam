@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Sparkles, Text } from '@react-three/drei';
 import * as THREE from 'three';
@@ -6,7 +6,8 @@ import { LevelData, PuzzleStation, WorldDoor, WorldLamp } from '../types/game';
 import { getWorldMaterial, createCalligraphyTexture } from './proceduralTextures';
 import { EvidenceModel } from './EvidenceModels';
 import { VietnameseLevelSetpieces } from './VietnameseProps';
-import { QUALITY_PROFILES } from './AssetPipeline';
+import { QUALITY_PROFILES, assetPipeline } from './AssetPipeline';
+import { VISUAL_STANDARD } from './VisualStandard';
 import { useGameStore } from '../store/gameStore';
 import { horrorAudio } from '../audio/horrorAudio';
 
@@ -137,6 +138,8 @@ const InteractiveDoorMesh: React.FC<{ door: WorldDoor; isOpen: boolean; isTarget
 }) => {
   const pivotRef = useRef<THREE.Group | null>(null);
   const woodMat = useMemo(() => getWorldMaterial('wood_dark'), []);
+  const woodOldMat = useMemo(() => getWorldMaterial('wood_old'), []);
+  const metalMat = useMemo(() => getWorldMaterial('metal'), []);
   const talismanTex = useMemo(() => createCalligraphyTexture('PHONG ẤN CẤM ĐỊA', '#d8b454', '#8b0f0f'), []);
 
   useFrame((_, delta) => {
@@ -149,34 +152,63 @@ const InteractiveDoorMesh: React.FC<{ door: WorldDoor; isOpen: boolean; isTarget
     );
   });
 
+  const [sx, sy, sz] = door.size;
+  const isThinX = sx < sz;
+  const faceOffset = (isThinX ? sx : sz) / 2 + 0.016;
+
   return (
     <group ref={pivotRef} position={door.position}>
+      {/* Core wooden slab */}
       <mesh material={woodMat} castShadow receiveShadow>
         <boxGeometry args={door.size} />
       </mesh>
+      {/* Traditional Vietnamese recessed cross-rails (Đố ngang cửa bức bàn) */}
+      {[-sy * 0.34, 0, sy * 0.34].map((ry, idx) => (
+        <mesh key={idx} position={[0, ry, 0]} material={woodOldMat}>
+          <boxGeometry
+            args={isThinX ? [sx + 0.035, 0.14, sz * 0.94] : [sx * 0.94, 0.14, sz + 0.035]}
+          />
+        </mesh>
+      ))}
+      {/* Iron hinge straps */}
+      {[-sy * 0.3, sy * 0.3].map((hy, idx) => (
+        <mesh
+          key={idx}
+          position={isThinX ? [0, hy, -sz * 0.36] : [-sx * 0.36, hy, 0]}
+          material={metalMat}
+        >
+          <boxGeometry args={isThinX ? [sx + 0.05, 0.06, 0.36] : [0.36, 0.06, sz + 0.05]} />
+        </mesh>
+      ))}
       {/* Brass door handle / ring */}
-      <mesh position={[door.size[0] * 0.34, 0, door.size[2] / 2 + 0.03]}>
-        <torusGeometry args={[0.06, 0.015, 8, 16]} />
+      <mesh
+        position={isThinX ? [faceOffset + 0.015, 0, sz * 0.3] : [sx * 0.32, 0, faceOffset + 0.015]}
+        rotation={[0, isThinX ? Math.PI / 2 : 0, 0]}
+      >
+        <torusGeometry args={[0.065, 0.016, 8, 16]} />
         <meshStandardMaterial
           color={isTargeted ? '#f5cf6e' : '#8f6c2e'}
           emissive={isTargeted ? '#a16207' : '#000000'}
-          emissiveIntensity={isTargeted ? 0.6 : 0}
-          metalness={0.8}
+          emissiveIntensity={isTargeted ? 0.65 : 0}
+          metalness={0.82}
           roughness={0.35}
         />
       </mesh>
-      {/* Sealing talisman strips if sealed */}
+      {/* Crossed sealing talismans on both faces of sealed doors */}
       {door.hasTalisman && !isOpen && (
-        <>
-          <mesh position={[0, 0.25, door.size[2] / 2 + 0.015]} rotation={[0, 0, 0.35]}>
-            <planeGeometry args={[0.24, 0.72]} />
+        <group
+          position={isThinX ? [-faceOffset, 0.25, 0] : [0, 0.25, faceOffset]}
+          rotation={[0, isThinX ? -Math.PI / 2 : 0, 0]}
+        >
+          <mesh rotation={[0, 0, 0.36]}>
+            <planeGeometry args={[0.24, 0.74]} />
             <meshStandardMaterial map={talismanTex} side={THREE.DoubleSide} />
           </mesh>
-          <mesh position={[0, 0.25, door.size[2] / 2 + 0.018]} rotation={[0, 0, -0.35]}>
-            <planeGeometry args={[0.24, 0.72]} />
+          <mesh position={[0, 0, 0.004]} rotation={[0, 0, -0.36]}>
+            <planeGeometry args={[0.24, 0.74]} />
             <meshStandardMaterial map={talismanTex} side={THREE.DoubleSide} />
           </mesh>
-        </>
+        </group>
       )}
     </group>
   );
@@ -457,6 +489,13 @@ export const LevelEnvironment: React.FC<LevelEnvironmentProps> = ({ level }) => 
 
   const qualityProfile = QUALITY_PROFILES[settings.graphicsQuality];
 
+  // Release unused external cached GLB resources cleanly when switching levels
+  useEffect(() => {
+    return () => {
+      assetPipeline.purgeUnusedModels();
+    };
+  }, [level.id]);
+
   // Dynamic Horror & Jumpscare Event Director + Real GPU Telemetry
   useFrame((_, rawDelta) => {
     const delta = Math.min(rawDelta, 0.05);
@@ -618,13 +657,22 @@ export const LevelEnvironment: React.FC<LevelEnvironmentProps> = ({ level }) => 
       <color attach="background" args={[level.skyColor]} />
       <fog attach="fog" args={[level.fogColor, level.fogNear, level.fogFar]} />
 
-      {/* Cool moonlight top + warm earthy ground hemisphere bounce + moon directional shadow */}
-      <hemisphereLight args={['#5e7699', '#24170f', 0.45]} />
-      <ambientLight color={level.ambientLightColor} intensity={level.ambientLightIntensity * 0.75} />
+      {/* Visual Standard v4.5: Deep dark ambient ratio + directional cold moonlight contrasting warm oil lamps */}
+      <hemisphereLight
+        args={[
+          VISUAL_STANDARD.lighting.hemisphereSky,
+          VISUAL_STANDARD.lighting.hemisphereGround,
+          VISUAL_STANDARD.lighting.hemisphereIntensity,
+        ]}
+      />
+      <ambientLight
+        color={level.ambientLightColor}
+        intensity={level.ambientLightIntensity * VISUAL_STANDARD.lighting.ambientMultiplier}
+      />
       <directionalLight
-        position={[12, 22, 8]}
-        intensity={0.52}
-        color="#8aa8d1"
+        position={[12, 22, 10]}
+        intensity={VISUAL_STANDARD.lighting.moonlightIntensity}
+        color={VISUAL_STANDARD.lighting.moonlightColor}
         castShadow={qualityProfile.shadowsEnabled}
         shadow-mapSize={[qualityProfile.shadowMapSize, qualityProfile.shadowMapSize]}
         shadow-bias={-0.0005}
@@ -693,12 +741,18 @@ export const LevelEnvironment: React.FC<LevelEnvironmentProps> = ({ level }) => 
             rotation={ev.worldRotation ?? [0, 0, 0]}
           >
             <EvidenceModel type={ev.modelType} scale={ev.worldScale ?? 0.55} />
-            {/* Subtle warm highlight beacon so evidence is discoverable in the dark */}
+            {/* Restrained realistic moonlight/dust glint (never arcade neon) */}
             <pointLight
-              position={[0, 0.28, 0]}
-              color={isTargeted ? '#fde047' : isCollected ? '#4ade80' : '#f59e0b'}
-              intensity={isTargeted ? 1.8 : isCollected ? 0.25 : 0.75}
-              distance={2.1}
+              position={[0, 0.24, 0]}
+              color={isTargeted ? '#f5d27a' : isCollected ? '#4a7a5c' : '#d6a456'}
+              intensity={
+                isTargeted
+                  ? VISUAL_STANDARD.lighting.evidenceGlintTargeted
+                  : isCollected
+                  ? 0.08
+                  : VISUAL_STANDARD.lighting.evidenceGlintBase
+              }
+              distance={1.6}
             />
           </group>
         );

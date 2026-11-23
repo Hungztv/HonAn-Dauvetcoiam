@@ -5,6 +5,8 @@ import { LevelData, SurfaceType, TargetInteractable } from '../types/game';
 import { useGameStore } from '../store/gameStore';
 import { horrorAudio } from '../audio/horrorAudio';
 import { QUALITY_PROFILES } from './AssetPipeline';
+import { createFlashlightCookieTexture } from './proceduralTextures';
+import { VISUAL_STANDARD } from './VisualStandard';
 
 interface FirstPersonControllerProps {
   level: LevelData;
@@ -54,6 +56,8 @@ export const FirstPersonController: React.FC<FirstPersonControllerProps> = ({ le
 
   const flashlightRef = useRef<THREE.SpotLight | null>(null);
   const flashlightTarget = useMemo(() => new THREE.Object3D(), []);
+  const desiredFlashTarget = useMemo(() => new THREE.Vector3(), []);
+  const flashlightCookie = useMemo(() => createFlashlightCookieTexture(), []);
 
   // Initialize camera position when level changes
   useEffect(() => {
@@ -401,22 +405,23 @@ export const FirstPersonController: React.FC<FirstPersonControllerProps> = ({ le
       }
     }
 
-    // Update Flashlight position & aim with eerie horror flicker
+    // Update Flashlight position & aim with realistic handheld smooth lag + lens cookie
     if (flashlightRef.current) {
       camera.getWorldDirection(camDir);
-      flashlightRef.current.position.copy(camera.position).addScaledVector(camDir, 0.15);
-      flashlightRef.current.position.y -= 0.12;
-      flashlightTarget.position.copy(camera.position).addScaledVector(camDir, 8);
+      flashlightRef.current.position.copy(camera.position).addScaledVector(camDir, 0.16);
+      flashlightRef.current.position.y -= 0.14;
+      desiredFlashTarget.copy(camera.position).addScaledVector(camDir, 9);
+      flashlightTarget.position.lerp(desiredFlashTarget, Math.min(1, delta * 18));
       flashlightTarget.updateMatrixWorld();
       flashlightRef.current.target = flashlightTarget;
 
-      let intensity = flashlightOn ? 18 : 0;
+      let intensity = flashlightOn ? VISUAL_STANDARD.lighting.flashlightIntensity : 0;
       if (activeJumpscare && !settings.reduceFlashing) {
-        intensity = Math.sin(state.clock.elapsedTime * 75) > 0 ? 28 : 0;
+        intensity = Math.sin(state.clock.elapsedTime * 75) > 0 ? 32 : 0;
       } else if (flashlightOn && !settings.reduceFlashing && (horrorIntensity > 0.45 || supernaturalGlitch > 0.15)) {
         const flickerNoise = Math.sin(state.clock.elapsedTime * 37) * Math.sin(state.clock.elapsedTime * 19);
-        if (flickerNoise > 0.84 - supernaturalGlitch * 0.4) {
-          intensity *= 0.22;
+        if (flickerNoise > 0.85 - supernaturalGlitch * 0.4) {
+          intensity *= 0.25;
         }
       }
       flashlightRef.current.intensity = intensity;
@@ -428,12 +433,13 @@ export const FirstPersonController: React.FC<FirstPersonControllerProps> = ({ le
   return (
     <spotLight
       ref={flashlightRef}
-      color="#fff0d4"
-      angle={0.48}
-      penumbra={0.68}
-      distance={24}
-      decay={1.4}
-      intensity={flashlightOn ? 18 : 0}
+      map={flashlightCookie}
+      color={VISUAL_STANDARD.lighting.flashlightColor}
+      angle={VISUAL_STANDARD.lighting.flashlightAngle}
+      penumbra={VISUAL_STANDARD.lighting.flashlightPenumbra}
+      distance={VISUAL_STANDARD.lighting.flashlightDistance}
+      decay={1.45}
+      intensity={flashlightOn ? VISUAL_STANDARD.lighting.flashlightIntensity : 0}
       castShadow={qProfile.shadowsEnabled}
       shadow-mapSize={[qProfile.shadowMapSize, qProfile.shadowMapSize]}
       shadow-bias={-0.0004}

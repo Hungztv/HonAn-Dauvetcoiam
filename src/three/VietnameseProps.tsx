@@ -14,6 +14,7 @@ import {
   InstancedRain,
   NightMoon,
 } from './AtmosphericEffects';
+import { Level1HouseBenchmark } from './Level1Benchmark';
 
 /** Traditional Vietnamese Hoành Phi (horizontal plaque) + Câu Đối (vertical couplets) */
 const AltarCalligraphySet: React.FC<{
@@ -280,21 +281,7 @@ const FerryboatDetails: React.FC = () => {
 export const VietnameseLevelSetpieces: React.FC<{ levelId: number }> = ({ levelId }) => {
   return (
     <group>
-      {levelId === 1 && (
-        <>
-          <AltarCalligraphySet
-            position={[0, 0.6, -6.4]}
-            title="ĐỨC LƯU QUANG"
-            leftCouplet="TỔ TÔNG CÔNG ĐỨC THIÊN NIÊN THỊNH"
-            rightCouplet="TỬ HIẾU TÔN HIỀN VẠN ĐẠI VINH"
-            width={3.5}
-          />
-          <WoodenRoofTrusses zPositions={[-5.2, -1.6, 2.0]} spanWidth={18} height={3.65} />
-          <SculptedStoneWell position={[0, 0, 7.6]} radius={1.26} />
-          <GroundMist color="#8b96a0" opacity={0.22} y={0.22} spread={14} />
-          <NightMoon position={[16, 18, 26]} />
-        </>
-      )}
+      {levelId === 1 && <Level1HouseBenchmark />}
 
       {levelId === 2 && (
         <>

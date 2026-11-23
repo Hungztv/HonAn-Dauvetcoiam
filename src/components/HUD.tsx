@@ -171,19 +171,21 @@ export const HUD: React.FC<HUDProps> = ({ level, onRequestLock }) => {
         </div>
       )}
 
-      {/* Pointer Lock Prompt Banner when active gameplay isn't mouse-locked */}
+      {/* Unobtrusive lower-center Pointer Lock Bar so the 3D scene & altar stay completely visible */}
       {overlay === 'none' && !pointerLocked && (
-        <div className="pointer-events-none fixed inset-0 z-10 flex items-center justify-center bg-black/30">
+        <div className="pointer-events-none fixed inset-x-0 bottom-12 z-10 flex justify-center px-4">
           <button
             onClick={onRequestLock}
-            className="pointer-events-auto flex flex-col items-center gap-2.5 px-7 py-5 rounded-lg bg-[#140e0a]/95 hover:bg-[#1e140e] border border-red-800/80 shadow-[0_0_50px_rgba(0,0,0,0.9)] transition cursor-pointer"
+            className="pointer-events-auto flex items-center gap-3 px-5 py-2.5 rounded-lg bg-[#120d0a]/90 hover:bg-[#1e140e] border border-red-800/75 shadow-[0_8px_36px_rgba(0,0,0,0.85)] transition cursor-pointer"
           >
-            <MousePointerClick className="w-7 h-7 text-amber-300 animate-pulse" />
-            <div className="font-display-vn text-xl text-[#efe4cc]">
-              Nhấn vào đây để khóa chuột & Điều tra 360°
-            </div>
-            <div className="text-xs text-[#b5a78e]">
-              WASD: Di chuyển • Chuột: Xoay 360° • Shift: Chạy • C / Ctrl: Ngồi • F: Đèn pin • E: Tương tác
+            <MousePointerClick className="w-5 h-5 text-amber-300 animate-pulse shrink-0" />
+            <div className="text-left">
+              <div className="font-display-vn text-sm text-[#efe4cc]">
+                Nhấn để khóa chuột & Điều tra góc nhìn thứ nhất 360°
+              </div>
+              <div className="text-[10px] text-[#b5a78e]">
+                Hoặc giữ chuột kéo trực tiếp trên màn hình để xoay góc nhìn • WASD để di chuyển
+              </div>
             </div>
           </button>
         </div>

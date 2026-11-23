@@ -198,20 +198,23 @@ class HorrorAudioEngine {
     }, 3400);
     this.ambientIntervals.push(cricketTimer);
 
-    // 4. Periodic distant atmospheric textures (creaks, water drips, temple mõ)
+    // 4. Periodic distant atmospheric textures (creaks, well drips, temple mõ)
     const detailTimer = window.setInterval(() => {
       const r = Math.random();
       const angle = Math.random() * Math.PI * 2;
       const dist = 5 + Math.random() * 12;
       const pos: Vec3 = [Math.cos(angle) * dist, 1.5, Math.sin(angle) * dist];
-      if (r < 0.3) {
+      if (theme === 'house' && r < 0.36) {
+        // Spatialized dripping inside Level 1's backyard stone well!
+        this.playWaterDrip([0, 0.5, 7.6]);
+      } else if (r < 0.3) {
         this.playWaterDrip(pos);
-      } else if (r < 0.55) {
+      } else if (r < 0.62) {
         this.playWoodCreak(pos);
-      } else if (r < 0.72 && (theme === 'shrine' || theme === 'temple')) {
+      } else if (r < 0.78 && (theme === 'shrine' || theme === 'temple')) {
         this.playWoodenFish(pos);
       }
-    }, 6500);
+    }, 5800);
     this.ambientIntervals.push(detailTimer);
   }
 

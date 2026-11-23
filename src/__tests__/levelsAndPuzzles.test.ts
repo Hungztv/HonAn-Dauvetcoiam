@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { LEVELS } from '../data/levels';
 import { CORE_TRUTH_IDS } from '../data/narrativePack';
+import { LEVEL_VISUAL_PROFILES, VISUAL_STANDARD } from '../three/VisualStandard';
+import { QUALITY_PROFILES, assetPipeline } from '../three/AssetPipeline';
 
 describe('All 5 Levels & 3-Tier Puzzle Integrity', () => {
   it('contains exactly 5 playable levels with unique IDs across evidences, clues, hotspots, doors, puzzles', () => {
@@ -90,5 +92,16 @@ describe('All 5 Levels & 3-Tier Puzzle Integrity', () => {
       expect(l5.tier2Puzzle.solution).toEqual(['Lược', 'Trâm', 'Xu', 'Trống']);
     }
     expect(l5.tier3Puzzle.moralChoice?.choiceId).toBe('judgment_nguyen_van_khai');
+  });
+
+  it('defines Visual Standard v4.5.1 profiles for all 5 levels and all 4 quality tiers', () => {
+    expect(VISUAL_STANDARD.postProcessing.restingChromaticAberration).toBe(0);
+    expect(VISUAL_STANDARD.postProcessing.bloomThreshold).toBeGreaterThanOrEqual(0.9);
+    for (const lvl of LEVELS) {
+      expect(LEVEL_VISUAL_PROFILES[lvl.id]).toBeDefined();
+    }
+    expect(Object.keys(QUALITY_PROFILES)).toEqual(['low', 'medium', 'high', 'ultra']);
+    const stats = assetPipeline.getStats();
+    expect(stats.cachedModels).toBe(0);
   });
 });
