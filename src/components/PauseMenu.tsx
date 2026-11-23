@@ -79,11 +79,46 @@ export const PauseMenu: React.FC = () => {
             />
           </div>
           <div className="flex items-center justify-between gap-3">
+            <span>Chất lượng đồ họa</span>
+            <select
+              value={settings.graphicsQuality}
+              onChange={(e) =>
+                updateSettings({
+                  graphicsQuality: e.target.value as 'low' | 'medium' | 'high' | 'ultra',
+                })
+              }
+              className="bg-[#1d1510] border border-[#593d27] rounded px-2 py-1 text-[11px] text-[#efe4cc]"
+            >
+              <option value="low">LOW</option>
+              <option value="medium">MEDIUM</option>
+              <option value="high">HIGH</option>
+              <option value="ultra">ULTRA</option>
+            </select>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span>Giảm chớp sáng</span>
+            <input
+              type="checkbox"
+              checked={settings.reduceFlashing}
+              onChange={(e) => updateSettings({ reduceFlashing: e.target.checked })}
+              className="w-4 h-4 accent-red-700"
+            />
+          </div>
+          <div className="flex items-center justify-between gap-3">
             <span>Tình huống Jumpscare</span>
             <input
               type="checkbox"
               checked={settings.enableJumpscares}
               onChange={(e) => updateSettings({ enableJumpscares: e.target.checked })}
+              className="w-4 h-4 accent-red-700"
+            />
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span>Hiển thị FPS / GPU</span>
+            <input
+              type="checkbox"
+              checked={settings.showPerfStats}
+              onChange={(e) => updateSettings({ showPerfStats: e.target.checked })}
               className="w-4 h-4 accent-red-700"
             />
           </div>

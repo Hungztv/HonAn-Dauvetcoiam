@@ -7,6 +7,7 @@ import { getLevelById } from './data/levels';
 import { LevelEnvironment } from './three/LevelEnvironment';
 import { FirstPersonController } from './three/FirstPersonController';
 import { HorrorPostProcessing } from './three/HorrorPostProcessing';
+import { QUALITY_PROFILES } from './three/AssetPipeline';
 import { MainMenu } from './components/MainMenu';
 import { HUD } from './components/HUD';
 import { InspectModal } from './components/InspectModal';
@@ -32,7 +33,7 @@ export function App() {
   const requestLock = useCallback(() => {
     horrorAudio.init();
     if (level) {
-      horrorAudio.setMasterVolume(settings.masterVolume);
+      horrorAudio.applyVolumes(settings.masterVolume, settings.musicVolume, settings.sfxVolume);
       horrorAudio.startAmbient(level.ambientTheme);
     }
     const canvas = canvasContainerRef.current?.querySelector('canvas');
@@ -40,15 +41,13 @@ export function App() {
       try {
         const res = canvas.requestPointerLock?.() as unknown as Promise<void> | undefined;
         if (res && typeof res.catch === 'function') {
-          res.catch(() => {
-            // Safely ignore pointer lock rejection (e.g. embedded webview or rapid ESC)
-          });
+          res.catch(() => {});
         }
       } catch {
         // Ignore synchronous pointer lock errors
       }
     }
-  }, [level, settings.masterVolume]);
+  }, [level, settings.masterVolume, settings.musicVolume, settings.sfxVolume]);
 
   if (screen === 'menu' || !level) {
     return <MainMenu />;
@@ -70,15 +69,18 @@ export function App() {
     ? level.evidences.find((e) => e.id === inspectingEvidenceId) ?? null
     : null;
 
+  const qualityProfile = QUALITY_PROFILES[settings.graphicsQuality];
+  const effectiveDpr = Math.max(0.6, Math.min(2.0, qualityProfile.dprMax * settings.resolutionScale));
+
   return (
     <div ref={canvasContainerRef} className="relative w-full h-full bg-[#060505] overflow-hidden">
       {/* Main 3D First-Person World Canvas with Unity-style ACES Filmic Tone Mapping & Post-FX */}
       <Canvas
-        shadows={settings.graphicsQuality === 'high'}
+        shadows={qualityProfile.shadowsEnabled}
         camera={{ fov: 68, near: 0.1, far: 85 }}
-        dpr={settings.graphicsQuality === 'high' ? [1, 1.75] : [1, 1.2]}
+        dpr={[Math.min(0.85, effectiveDpr), effectiveDpr]}
         gl={{
-          antialias: true,
+          antialias: settings.graphicsQuality !== 'low',
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure: 1.12,
           powerPreference: 'high-performance',

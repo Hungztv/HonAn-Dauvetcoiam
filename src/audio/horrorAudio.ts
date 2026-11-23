@@ -3,10 +3,15 @@ import { SurfaceType, Vec3 } from '../types/game';
 class HorrorAudioEngine {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
+  private musicGain: GainNode | null = null;
+  private sfxGain: GainNode | null = null;
   private ambientNodes: AudioNode[] = [];
   private ambientIntervals: number[] = [];
   private noiseBuffer: AudioBuffer | null = null;
   private volume = 0.75;
+  private musicVolume = 0.75;
+  private sfxVolume = 0.85;
+  private paused = false;
   private initialized = false;
   private activeTheme: string | null = null;
 
@@ -17,7 +22,13 @@ class HorrorAudioEngine {
       if (!AudioCtx) return;
       this.ctx = new AudioCtx();
       this.masterGain = this.ctx.createGain();
+      this.musicGain = this.ctx.createGain();
+      this.sfxGain = this.ctx.createGain();
       this.masterGain.gain.value = this.volume;
+      this.musicGain.gain.value = this.musicVolume;
+      this.sfxGain.gain.value = this.sfxVolume;
+      this.musicGain.connect(this.masterGain);
+      this.sfxGain.connect(this.masterGain);
       this.masterGain.connect(this.ctx.destination);
       this.noiseBuffer = this.createNoiseBuffer(3);
       this.initialized = true;
@@ -28,10 +39,24 @@ class HorrorAudioEngine {
   }
 
   public setMasterVolume(v: number) {
-    this.volume = Math.max(0, Math.min(1, v));
-    if (this.masterGain && this.ctx) {
-      this.masterGain.gain.setTargetAtTime(this.volume, this.ctx.currentTime, 0.05);
-    }
+    this.applyVolumes(v, this.musicVolume, this.sfxVolume);
+  }
+
+  public applyVolumes(master: number, music: number, sfx: number) {
+    this.volume = Math.max(0, Math.min(1, master));
+    this.musicVolume = Math.max(0, Math.min(1, music));
+    this.sfxVolume = Math.max(0, Math.min(1, sfx));
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const pauseScale = this.paused ? 0.18 : 1;
+    if (this.masterGain) this.masterGain.gain.setTargetAtTime(this.volume * pauseScale, now, 0.05);
+    if (this.musicGain) this.musicGain.gain.setTargetAtTime(this.musicVolume, now, 0.05);
+    if (this.sfxGain) this.sfxGain.gain.setTargetAtTime(this.sfxVolume, now, 0.05);
+  }
+
+  public setPaused(paused: boolean) {
+    this.paused = paused;
+    this.applyVolumes(this.volume, this.musicVolume, this.sfxVolume);
   }
 
   public updateListener(pos: Vec3, forward: Vec3, up: Vec3) {
@@ -72,11 +97,12 @@ class HorrorAudioEngine {
     return buffer;
   }
 
-  private createPanner(position?: Vec3): AudioNode {
-    if (!this.ctx || !this.masterGain) {
+  private createPanner(position?: Vec3, bus: 'music' | 'sfx' = 'sfx'): AudioNode {
+    const targetBus = bus === 'music' ? this.musicGain : this.sfxGain;
+    if (!this.ctx || !targetBus) {
       throw new Error('AudioContext not ready');
     }
-    if (!position) return this.masterGain;
+    if (!position) return targetBus;
     const panner = this.ctx.createPanner();
     panner.panningModel = 'HRTF';
     panner.distanceModel = 'inverse';
@@ -86,7 +112,7 @@ class HorrorAudioEngine {
     panner.positionX.value = position[0];
     panner.positionY.value = position[1];
     panner.positionZ.value = position[2];
-    panner.connect(this.masterGain);
+    panner.connect(targetBus);
     return panner;
   }
 
@@ -128,21 +154,21 @@ class HorrorAudioEngine {
     osc1.connect(droneFilter);
     osc2.connect(droneFilter);
     droneFilter.connect(droneGain);
-    droneGain.connect(this.masterGain);
+    droneGain.connect(this.musicGain ?? this.masterGain);
 
     osc1.start();
     osc2.start();
     this.ambientNodes.push(osc1, osc2, droneFilter, droneGain);
 
-    // 2. Wind / Night air noise with slow LFO filter sweep
+    // 2. Wind / Night rain air noise with slow LFO filter sweep
     const windSource = this.ctx.createBufferSource();
     windSource.buffer = this.noiseBuffer;
     windSource.loop = true;
 
     const windFilter = this.ctx.createBiquadFilter();
     windFilter.type = 'bandpass';
-    windFilter.frequency.value = theme === 'river' ? 320 : 420;
-    windFilter.Q.value = 1.6;
+    windFilter.frequency.value = theme === 'river' || theme === 'village' ? 580 : 420;
+    windFilter.Q.value = theme === 'river' || theme === 'village' ? 0.85 : 1.6;
 
     const windLfo = this.ctx.createOscillator();
     windLfo.frequency.value = 0.14;
@@ -152,11 +178,11 @@ class HorrorAudioEngine {
     windLfoGain.connect(windFilter.frequency);
 
     const windGain = this.ctx.createGain();
-    windGain.gain.value = theme === 'river' ? 0.16 : 0.11;
+    windGain.gain.value = theme === 'river' || theme === 'village' ? 0.17 : 0.11;
 
     windSource.connect(windFilter);
     windFilter.connect(windGain);
-    windGain.connect(this.masterGain);
+    windGain.connect(this.musicGain ?? this.masterGain);
 
     windSource.start();
     windLfo.start();

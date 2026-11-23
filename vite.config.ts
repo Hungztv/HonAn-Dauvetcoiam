@@ -8,4 +8,16 @@ export default defineConfig({
     port: 5173,
     host: true,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-three': ['three'],
+          'vendor-r3f': ['@react-three/fiber', '@react-three/drei'],
+          'vendor-postfx': ['@react-three/postprocessing', 'postprocessing'],
+          'vendor-ui': ['framer-motion', 'lucide-react', 'zustand'],
+        },
+      },
+    },
+  },
 });

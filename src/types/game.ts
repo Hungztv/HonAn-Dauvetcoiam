@@ -23,6 +23,8 @@ export type EvidenceModelType =
 
 export type ImportanceLevel = 'quan_trong' | 'then_chot' | 'bo_tro';
 
+export type GraphicsPreset = 'low' | 'medium' | 'high' | 'ultra';
+
 export interface EvidenceHotspot {
   id: string;
   label: string;
@@ -32,6 +34,10 @@ export interface EvidenceHotspot {
   discoveryText: string;
   /** Clue unlocked when this hotspot is examined */
   unlocksClueId: string;
+  /** Optional: requires player to rotate to view this side / zoom in closer */
+  requiresZoom?: boolean;
+  /** Optional: normal direction hinting which face this hotspot sits on */
+  faceHint?: 'front' | 'back' | 'bottom' | 'side';
 }
 
 export interface EvidenceItem {
@@ -42,17 +48,12 @@ export interface EvidenceItem {
   fullDesc: string;
   modelType: EvidenceModelType;
   importance: ImportanceLevel;
-  /** Position in the 3D level world */
   worldPosition: Vec3;
   worldRotation?: Vec3;
   worldScale?: number;
-  /** Optional zone/room name */
   locationName: string;
-  /** Only accessible after Tier 2 unlocks the sealed area */
   requiresTier?: 1 | 2 | 3;
-  /** Inspectable 3D hotspots */
   hotspots: EvidenceHotspot[];
-  /** Clue unlocked merely upon picking up / initial inspect */
   initialClueId?: string;
 }
 
@@ -63,7 +64,6 @@ export interface Clue {
   summary: string;
   sourceName: string;
   tier: 1 | 2 | 3;
-  /** Initial position on connection board (percentage 0-100) */
   boardX: number;
   boardY: number;
 }
@@ -75,7 +75,6 @@ export interface Suspect {
   role: string;
   description: string;
   alibi: string;
-  /** Clue ID that reveals deeper secret about this suspect */
   secretClueId?: string;
   secretNote?: string;
 }
@@ -86,13 +85,16 @@ export interface BoardConnection {
   clueB: string;
   title: string;
   deductionText: string;
-  /** Optional clue unlocked upon successfully making this connection */
   unlocksClueId?: string;
 }
 
-export interface PuzzleDialOption {
-  label: string;
-  sublabel?: string;
+export interface TieredHints {
+  /** Level 1: where to observe */
+  level1: string;
+  /** Level 2: which group of evidence to review */
+  level2: string;
+  /** Level 3: logical method to apply without giving away raw answer */
+  level3: string;
 }
 
 export interface CodeLockPuzzle {
@@ -102,6 +104,9 @@ export interface CodeLockPuzzle {
   title: string;
   subtitle: string;
   hintNote: string;
+  hints?: TieredHints;
+  /** Optional board connection IDs that should be solved before or alongside */
+  requiredConnectionIds?: string[];
   dials: {
     label: string;
     options: string[];
@@ -117,6 +122,8 @@ export interface SequencePuzzle {
   title: string;
   subtitle: string;
   hintNote: string;
+  hints?: TieredHints;
+  requiredConnectionIds?: string[];
   items: {
     id: string;
     label: string;
@@ -136,6 +143,17 @@ export interface DeductionQuestion {
   correctOptionId: string;
 }
 
+export interface MoralChoicePromptConfig {
+  choiceId: 'fate_dao_thi_may' | 'fate_village_truth' | 'judgment_nguyen_van_khai';
+  title: string;
+  prompt: string;
+  options: {
+    value: string;
+    label: string;
+    consequenceHint: string;
+  }[];
+}
+
 export interface DeductionPuzzle {
   kind: 'deduction';
   id: string;
@@ -143,7 +161,16 @@ export interface DeductionPuzzle {
   title: string;
   subtitle: string;
   hintNote: string;
+  hints?: TieredHints;
   questions: DeductionQuestion[];
+  /** Core Truth ID unlocked when this level's Tier 3 deduction is completed */
+  unlocksCoreTruthId?:
+    | 'truth_l1_sealed_room'
+    | 'truth_l2_living_sacrifice'
+    | 'truth_l3_twin_bloodline'
+    | 'truth_l4_forged_edict';
+  /** Optional moral choice locked upon completing this level's climax */
+  moralChoice?: MoralChoicePromptConfig;
   successNarrative: string;
   epilogueText: string;
 }
@@ -172,7 +199,6 @@ export interface WorldBox {
     | 'gold'
     | 'paper';
   collidable?: boolean;
-  /** Optional wall inscription shown when horror level is high */
   horrorText?: string;
 }
 
@@ -182,7 +208,6 @@ export interface WorldDoor {
   position: Vec3;
   size: Vec3;
   rotationY?: number;
-  /** If set, door is locked until this puzzle ID is solved */
   lockedByPuzzleId?: string;
   lockedMessage?: string;
   hasTalisman?: boolean;
@@ -223,6 +248,8 @@ export interface HorrorAnchor {
   minHorror: number;
   text?: string;
   rotationY?: number;
+  /** Optional: only visible during NG+ */
+  ngPlusOnly?: boolean;
 }
 
 export interface TierMeta {
@@ -254,9 +281,7 @@ export interface LevelData {
   bounds: { minX: number; maxX: number; minZ: number; maxZ: number };
   surfaceZones: SurfaceZone[];
   tiers: [TierMeta, TierMeta, TierMeta];
-  /** Number of clues needed to complete Tier 1 and guide to Tier 2 */
   tier1RequiredClues: number;
-  /** Optional connection IDs required to unlock Tier 2 insight */
   tier2RequiredConnections?: string[];
   tier2Puzzle: CodeLockPuzzle | SequencePuzzle;
   tier3Puzzle: DeductionPuzzle;
@@ -270,6 +295,8 @@ export interface LevelData {
   puzzleStations: PuzzleStation[];
   horrorAnchors: HorrorAnchor[];
   horrorWhispers: string[];
+  /** Optional NG+ extra whisper lines */
+  ngPlusWhispers?: string[];
 }
 
 export type GameScreen = 'menu' | 'chapter_intro' | 'playing' | 'level_complete' | 'ending';
@@ -284,10 +311,16 @@ export type JumpscareVariant =
 
 export interface GameSettings {
   masterVolume: number;
+  musicVolume: number;
+  sfxVolume: number;
   mouseSensitivity: number;
-  graphicsQuality: 'high' | 'medium';
+  graphicsQuality: GraphicsPreset;
+  resolutionScale: number;
+  cameraShake: boolean;
+  reduceFlashing: boolean;
   showHints: boolean;
   enableJumpscares: boolean;
+  showPerfStats: boolean;
 }
 
 export interface TargetInteractable {
@@ -302,6 +335,7 @@ export interface LevelProgress {
   collectedEvidenceIds: string[];
   discoveredHotspotIds: string[];
   unlockedClueIds: string[];
+  readClueIds: string[];
   solvedConnectionIds: string[];
   solvedPuzzleIds: string[];
   openDoorIds: string[];

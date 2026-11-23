@@ -12,9 +12,12 @@ import {
   Lock,
   Eye,
   Link2,
+  ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 import { LevelData } from '../types/game';
 import { useGameStore } from '../store/gameStore';
+import { CORE_TRUTH_CATALOG, CORE_TRUTH_IDS } from '../data/narrativePack';
 
 interface InvestigationJournalProps {
   level: LevelData;
@@ -25,8 +28,12 @@ export const InvestigationJournal: React.FC<InvestigationJournalProps> = ({ leve
   const setJournalTab = useGameStore((s) => s.setJournalTab);
   const setOverlay = useGameStore((s) => s.setOverlay);
   const openInspect = useGameStore((s) => s.openInspect);
+  const markClueRead = useGameStore((s) => s.markClueRead);
   const attemptBoardConnection = useGameStore((s) => s.attemptBoardConnection);
+  const narrative = useGameStore((s) => s.narrative);
   const progress = useGameStore((s) => s.progressByLevel[level.id]);
+
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Connection board interactive state
   const boardRef = useRef<HTMLDivElement | null>(null);
@@ -43,14 +50,35 @@ export const InvestigationJournal: React.FC<InvestigationJournalProps> = ({ leve
 
   const collectedEvIds = progress?.collectedEvidenceIds ?? [];
   const unlockedClueIds = progress?.unlockedClueIds ?? [];
+  const readClueIds = progress?.readClueIds ?? [];
   const discoveredHotspotIds = progress?.discoveredHotspotIds ?? [];
   const solvedConnIds = progress?.solvedConnectionIds ?? [];
   const currentTier = progress?.currentTier ?? 1;
 
   const unlockedClues = level.clues.filter((c) => unlockedClueIds.includes(c.id));
   const collectedEvidences = level.evidences.filter((e) => collectedEvIds.includes(e.id));
+  const unreadClueCount = unlockedClues.filter((c) => !readClueIds.includes(c.id)).length;
+
+  const q = searchQuery.trim().toLowerCase();
+  const filteredEvidences = q
+    ? collectedEvidences.filter(
+        (e) =>
+          e.name.toLowerCase().includes(q) ||
+          e.shortDesc.toLowerCase().includes(q) ||
+          e.locationName.toLowerCase().includes(q)
+      )
+    : collectedEvidences;
+  const filteredClues = q
+    ? unlockedClues.filter(
+        (c) =>
+          c.title.toLowerCase().includes(q) ||
+          c.summary.toLowerCase().includes(q) ||
+          c.sourceName.toLowerCase().includes(q)
+      )
+    : unlockedClues;
 
   const handleCardClick = (clueId: string) => {
+    markClueRead(clueId);
     if (!selectedClueId) {
       setSelectedClueId(clueId);
       setBoardFeedback(null);
@@ -76,7 +104,11 @@ export const InvestigationJournal: React.FC<InvestigationJournalProps> = ({ leve
   const tabs = [
     { id: 'case' as const, label: 'Hồ Sơ Vụ Án', icon: FileText },
     { id: 'evidence' as const, label: `Vật Chứng (${collectedEvidences.length}/${level.evidences.length})`, icon: Package },
-    { id: 'clues' as const, label: `Manh Mối (${unlockedClues.length}/${level.clues.length})`, icon: Search },
+    {
+      id: 'clues' as const,
+      label: `Manh Mối (${unlockedClues.length}/${level.clues.length})${unreadClueCount > 0 ? ` • ${unreadClueCount} mới` : ''}`,
+      icon: Search,
+    },
     { id: 'suspects' as const, label: 'Nghi Can', icon: Users },
     {
       id: 'board' as const,
@@ -94,23 +126,43 @@ export const InvestigationJournal: React.FC<InvestigationJournalProps> = ({ leve
     >
       <div className="w-full max-w-6xl h-[88vh] bg-[#120e0b] border border-[#614229]/80 rounded-lg shadow-[0_0_90px_rgba(0,0,0,0.95)] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-[#19130e] border-b border-[#4a321f]">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 bg-[#19130e] border-b border-[#4a321f]">
           <div className="flex items-center gap-3">
             <BookOpen className="w-6 h-6 text-red-500" />
             <div>
-              <div className="text-[11px] uppercase tracking-[0.22em] text-red-400">
-                Sổ Điều Tra — {level.code}
+              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-red-400">
+                <span>Sổ Điều Tra — {level.code}</span>
+                {narrative.isNewGamePlus && (
+                  <span className="px-1.5 py-0.5 rounded bg-amber-900/70 text-amber-200 text-[10px]">
+                    NEW GAME+
+                  </span>
+                )}
               </div>
               <h2 className="font-display-vn text-2xl text-[#efe4cc]">{level.title}</h2>
             </div>
           </div>
-          <button
-            onClick={() => setOverlay('none')}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#241a13] hover:bg-red-950 border border-[#614229] text-xs uppercase tracking-wider text-[#efe4cc] rounded cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-            Đóng (Tab / ESC)
-          </button>
+
+          <div className="flex items-center gap-2.5">
+            {(journalTab === 'evidence' || journalTab === 'clues') && (
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-[#8a7c66] absolute left-2.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Tìm trong hồ sơ..."
+                  className="bg-[#0e0b08] border border-[#4f3622] rounded pl-8 pr-3 py-1.5 text-xs text-[#efe4cc] placeholder:text-[#786b58] focus:outline-none focus:border-amber-600"
+                />
+              </div>
+            )}
+            <button
+              onClick={() => setOverlay('none')}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#241a13] hover:bg-red-950 border border-[#614229] text-xs uppercase tracking-wider text-[#efe4cc] rounded cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+              Đóng (Tab / ESC)
+            </button>
+          </div>
         </div>
 
         {/* Navigation Tabs */}
@@ -156,7 +208,7 @@ export const InvestigationJournal: React.FC<InvestigationJournalProps> = ({ leve
                       <span className="text-[#efe4cc] font-medium">{level.era}</span>
                     </div>
                     <div>
-                      <span className="text-[#8e7f68] block mb-0.5">Nạn nhân / Trung tâm</span>
+                      <span className="text-[#8e7f68] block mb-0.5">Trung tâm vụ án</span>
                       <span className="text-red-300 font-medium">{level.victim}</span>
                     </div>
                   </div>
@@ -170,7 +222,6 @@ export const InvestigationJournal: React.FC<InvestigationJournalProps> = ({ leve
                   {level.tiers.map((tier) => {
                     const done = currentTier > tier.tier || progress?.completed;
                     const active = currentTier === tier.tier && !progress?.completed;
-                    const locked = currentTier < tier.tier;
                     return (
                       <div
                         key={tier.tier}
@@ -203,7 +254,7 @@ export const InvestigationJournal: React.FC<InvestigationJournalProps> = ({ leve
                         <p className="text-xs text-[#d1c5ad] leading-relaxed">{tier.objective}</p>
                         {active && (
                           <p className="text-[11px] text-amber-300/90 mt-2 italic">
-                            Gợi ý điều tra: {tier.completionHint}
+                            Hướng điều tra: {tier.completionHint}
                           </p>
                         )}
                       </div>
@@ -212,30 +263,94 @@ export const InvestigationJournal: React.FC<InvestigationJournalProps> = ({ leve
                 </div>
               </div>
 
-              <div className="p-5 rounded bg-[#19130e] border border-[#473120] h-fit space-y-4">
-                <h3 className="font-serif-vn text-xl text-amber-200 border-b border-[#3a281a] pb-2">
-                  Tổng quan tiến độ
-                </h3>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-[#a3947d]">Vật chứng tìm thấy</span>
-                    <span className="font-semibold text-[#efe4cc]">
-                      {collectedEvidences.length} / {level.evidences.length}
+              {/* Right Column: Narrative Core Truths & Chính Khí Ledger */}
+              <div className="space-y-4">
+                <div className="p-5 rounded bg-[#19130e] border border-[#473120] space-y-3">
+                  <div className="flex items-center justify-between border-b border-[#3a281a] pb-2">
+                    <h3 className="font-serif-vn text-xl text-amber-200 flex items-center gap-2">
+                      <ShieldCheck className="w-5 h-5 text-amber-400" />
+                      Chính Khí & Chân Lý
+                    </h3>
+                    <span
+                      className={`text-sm font-bold px-2 py-0.5 rounded ${
+                        narrative.spiritScore > 0
+                          ? 'bg-emerald-950 text-emerald-300'
+                          : narrative.spiritScore < 0
+                          ? 'bg-red-950 text-red-300'
+                          : 'bg-stone-900 text-stone-300'
+                      }`}
+                    >
+                      {narrative.spiritScore >= 0 ? `+${narrative.spiritScore}` : narrative.spiritScore}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-[#a3947d]">Manh mối giải mã</span>
-                    <span className="font-semibold text-[#efe4cc]">
-                      {unlockedClues.length} / {level.clues.length}
-                    </span>
+
+                  <div className="text-xs text-[#b5a78e]">
+                    Chân Lý Cốt Lõi ({narrative.coreTruths.length}/4):
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-[#a3947d]">Liên kết bảng suy luận</span>
-                    <span className="font-semibold text-[#efe4cc]">
-                      {solvedConnIds.length} / {level.boardConnections.length}
-                    </span>
+                  <div className="space-y-1.5">
+                    {CORE_TRUTH_IDS.map((tid) => {
+                      const unlocked = narrative.coreTruths.includes(tid);
+                      const meta = CORE_TRUTH_CATALOG[tid];
+                      return (
+                        <div
+                          key={tid}
+                          className={`p-2 rounded border text-[11px] flex items-center justify-between gap-2 ${
+                            unlocked
+                              ? 'bg-emerald-950/30 border-emerald-800/60 text-emerald-200'
+                              : 'bg-[#120e0b] border-[#2c2119] text-[#786b58]'
+                          }`}
+                        >
+                          <span>
+                            {meta.direction} ({meta.year}): {unlocked ? meta.title : 'Chưa sáng tỏ'}
+                          </span>
+                          {unlocked ? (
+                            <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
+                          ) : (
+                            <Lock className="w-3 h-3 shrink-0" />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Moral Choices Ledger */}
+                  <div className="pt-2 border-t border-[#3a281a] text-[11px] space-y-1.5 text-[#c7baa2]">
+                    <div className="text-[#94856e] uppercase tracking-wider text-[10px]">
+                      Lựa chọn đạo đức đã chốt
+                    </div>
+                    <div>
+                      • Đào Thị Mây (Án 02):{' '}
+                      <strong className="text-amber-200">
+                        {narrative.moralChoices.fate_dao_thi_may === 'release'
+                          ? 'Giải thoát (+1)'
+                          : narrative.moralChoices.fate_dao_thi_may === 'keep'
+                          ? 'Giữ lại (-1)'
+                          : 'Chưa quyết định'}
+                      </strong>
+                    </div>
+                    <div>
+                      • Hồ sơ Ngôi Đình (Án 04):{' '}
+                      <strong className="text-amber-200">
+                        {narrative.moralChoices.fate_village_truth === 'reveal'
+                          ? 'Công bố sự thật (+1)'
+                          : narrative.moralChoices.fate_village_truth === 'burn'
+                          ? 'Thiêu hủy (-1)'
+                          : 'Chưa quyết định'}
+                      </strong>
+                    </div>
+                    <div>
+                      • Phán quyết Nguyễn Văn Khải (Án 05):{' '}
+                      <strong className="text-amber-200">
+                        {narrative.moralChoices.judgment_nguyen_van_khai === 'forgive'
+                          ? 'Tha thứ'
+                          : narrative.moralChoices.judgment_nguyen_van_khai === 'condemn'
+                          ? 'Kết tội'
+                          : 'Chưa tuyên án'}
+                      </strong>
+                    </div>
                   </div>
                 </div>
+
                 <blockquote className="text-xs italic text-[#b8aa90] border-l-2 border-red-800 pl-3 py-1">
                   “{level.introQuote}”
                 </blockquote>
@@ -246,13 +361,15 @@ export const InvestigationJournal: React.FC<InvestigationJournalProps> = ({ leve
           {/* TAB 2: EVIDENCE */}
           {journalTab === 'evidence' && (
             <div>
-              {collectedEvidences.length === 0 ? (
+              {filteredEvidences.length === 0 ? (
                 <div className="text-center py-16 text-[#8f826c] text-sm">
-                  Chưa thu thập vật chứng nào. Hãy khám phá hiện trường và nhấn <strong>E</strong> để kiểm tra đồ vật.
+                  {collectedEvidences.length === 0
+                    ? 'Chưa thu thập vật chứng nào. Hãy khám phá hiện trường và nhấn E để kiểm tra đồ vật.'
+                    : 'Không tìm thấy vật chứng khớp với từ khóa.'}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {collectedEvidences.map((ev) => {
+                  {filteredEvidences.map((ev) => {
                     const foundHs = ev.hotspots.filter((h) => discoveredHotspotIds.includes(h.id)).length;
                     return (
                       <div
@@ -262,7 +379,7 @@ export const InvestigationJournal: React.FC<InvestigationJournalProps> = ({ leve
                         <div>
                           <div className="flex items-start justify-between gap-2">
                             <h4 className="font-serif-vn text-lg font-semibold text-[#efe4cc]">{ev.name}</h4>
-                            <span className="text-[11px] px-2 py-0.5 rounded bg-black/50 text-amber-300 border border-amber-800/40">
+                            <span className="text-[11px] px-2 py-0.5 rounded bg-black/50 text-amber-300 border border-amber-800/40 shrink-0">
                               {foundHs}/{ev.hotspots.length} chi tiết
                             </span>
                           </div>
@@ -287,27 +404,44 @@ export const InvestigationJournal: React.FC<InvestigationJournalProps> = ({ leve
           {/* TAB 3: CLUES */}
           {journalTab === 'clues' && (
             <div>
-              {unlockedClues.length === 0 ? (
+              {filteredClues.length === 0 ? (
                 <div className="text-center py-16 text-[#8f826c] text-sm">
-                  Chưa có manh mối nào được ghi nhận. Hãy xoay vật chứng 3D và bấm vào các chi tiết ẩn!
+                  {unlockedClues.length === 0
+                    ? 'Chưa có manh mối nào được ghi nhận. Hãy xoay vật chứng 3D và soi các chi tiết ẩn!'
+                    : 'Không tìm thấy manh mối khớp với từ khóa.'}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {unlockedClues.map((clue) => (
-                    <div
-                      key={clue.id}
-                      className="p-4 rounded bg-[#1b1510] border border-[#523925] space-y-1.5"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] uppercase tracking-widest px-2 py-0.5 rounded bg-red-950/70 text-red-200 border border-red-800/50">
-                          Tầng {clue.tier}
-                        </span>
-                        <span className="text-[11px] text-[#8f7f67]">Nguồn: {clue.sourceName}</span>
+                  {filteredClues.map((clue) => {
+                    const isUnread = !readClueIds.includes(clue.id);
+                    return (
+                      <div
+                        key={clue.id}
+                        onClick={() => markClueRead(clue.id)}
+                        className={`p-4 rounded border space-y-1.5 transition cursor-pointer ${
+                          isUnread
+                            ? 'bg-[#221711] border-amber-600/80'
+                            : 'bg-[#1b1510] border-[#523925]'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] uppercase tracking-widest px-2 py-0.5 rounded bg-red-950/70 text-red-200 border border-red-800/50">
+                              Tầng {clue.tier}
+                            </span>
+                            {isUnread && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-600 text-black font-bold flex items-center gap-0.5">
+                                <Sparkles className="w-2.5 h-2.5" /> MỚI
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[11px] text-[#8f7f67]">Nguồn: {clue.sourceName}</span>
+                        </div>
+                        <h4 className="font-serif-vn text-lg text-amber-100 font-semibold">{clue.title}</h4>
+                        <p className="text-xs text-[#d6cab3] leading-relaxed">{clue.summary}</p>
                       </div>
-                      <h4 className="font-serif-vn text-lg text-amber-100 font-semibold">{clue.title}</h4>
-                      <p className="text-xs text-[#d6cab3] leading-relaxed">{clue.summary}</p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -329,7 +463,7 @@ export const InvestigationJournal: React.FC<InvestigationJournalProps> = ({ leve
                     </div>
                     <p className="text-xs text-[#d1c5ad] leading-relaxed">{sus.description}</p>
                     <div className="text-xs text-[#a89a82]">
-                      <strong className="text-[#dfd4bc]">Lời khai / Chứng cứ ngoại phạm:</strong> {sus.alibi}
+                      <strong className="text-[#dfd4bc]">Dấu vết / Lời khai:</strong> {sus.alibi}
                     </div>
                     {sus.secretNote && (
                       <div
@@ -357,7 +491,7 @@ export const InvestigationJournal: React.FC<InvestigationJournalProps> = ({ leve
                 <div className="flex items-center gap-2 text-[#dfd4bc]">
                   <Link2 className="w-4 h-4 text-red-400" />
                   <span>
-                    Nhấn lần lượt <strong>2 thẻ manh mối</strong> để kéo sợi chỉ đỏ kết nối suy luận (có thể giữ chuột kéo để sắp xếp vị trí thẻ).
+                    Nhấn lần lượt <strong>2 thẻ manh mối</strong> để kéo sợi chỉ đỏ xác thực suy luận (bắt buộc để mở khóa cơ chế Tầng 2). Giữ chuột để kéo sắp xếp vị trí thẻ.
                   </span>
                 </div>
                 {selectedClueId && (
@@ -379,7 +513,6 @@ export const InvestigationJournal: React.FC<InvestigationJournalProps> = ({ leve
                 </div>
               )}
 
-              {/* Cork / Wood Pinboard */}
               <div
                 ref={boardRef}
                 onMouseMove={handleBoardMouseMove}
@@ -387,7 +520,6 @@ export const InvestigationJournal: React.FC<InvestigationJournalProps> = ({ leve
                 onMouseLeave={() => setDraggingId(null)}
                 className="relative flex-1 min-h-[400px] rounded-lg border-2 border-[#473120] bg-[radial-gradient(circle_at_center,#231a13_0%,#120d09_100%)] overflow-hidden"
               >
-                {/* SVG Red Yarn Lines */}
                 <svg className="absolute inset-0 w-full h-full pointer-events-none">
                   {level.boardConnections
                     .filter((conn) => solvedConnIds.includes(conn.id))
@@ -452,7 +584,6 @@ export const InvestigationJournal: React.FC<InvestigationJournalProps> = ({ leve
                 )}
               </div>
 
-              {/* Confirmed Deductions List */}
               {solvedConnIds.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {level.boardConnections

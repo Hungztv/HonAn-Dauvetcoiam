@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { LevelData, SurfaceType, TargetInteractable } from '../types/game';
 import { useGameStore } from '../store/gameStore';
 import { horrorAudio } from '../audio/horrorAudio';
+import { QUALITY_PROFILES } from './AssetPipeline';
 
 interface FirstPersonControllerProps {
   level: LevelData;
@@ -258,9 +259,9 @@ export const FirstPersonController: React.FC<FirstPersonControllerProps> = ({ le
 
     drainFlashlight(delta);
 
-    // Apply camera orientation (with violent shake during jumpscare!)
+    // Apply camera orientation (with camera shake during jumpscare if enabled in Settings)
     camera.rotation.order = 'YXZ';
-    if (activeJumpscare) {
+    if (activeJumpscare && settings.cameraShake) {
       const t = state.clock.elapsedTime * 55;
       camera.rotation.y = yaw.current + Math.sin(t) * 0.065;
       camera.rotation.x = pitch.current + Math.cos(t * 1.3) * 0.055;
@@ -410,10 +411,9 @@ export const FirstPersonController: React.FC<FirstPersonControllerProps> = ({ le
       flashlightRef.current.target = flashlightTarget;
 
       let intensity = flashlightOn ? 18 : 0;
-      if (activeJumpscare) {
-        // Strobe flashlight violently during jumpscare
+      if (activeJumpscare && !settings.reduceFlashing) {
         intensity = Math.sin(state.clock.elapsedTime * 75) > 0 ? 28 : 0;
-      } else if (flashlightOn && (horrorIntensity > 0.45 || supernaturalGlitch > 0.15)) {
+      } else if (flashlightOn && !settings.reduceFlashing && (horrorIntensity > 0.45 || supernaturalGlitch > 0.15)) {
         const flickerNoise = Math.sin(state.clock.elapsedTime * 37) * Math.sin(state.clock.elapsedTime * 19);
         if (flickerNoise > 0.84 - supernaturalGlitch * 0.4) {
           intensity *= 0.22;
@@ -422,6 +422,8 @@ export const FirstPersonController: React.FC<FirstPersonControllerProps> = ({ le
       flashlightRef.current.intensity = intensity;
     }
   });
+
+  const qProfile = QUALITY_PROFILES[settings.graphicsQuality];
 
   return (
     <spotLight
@@ -432,8 +434,8 @@ export const FirstPersonController: React.FC<FirstPersonControllerProps> = ({ le
       distance={24}
       decay={1.4}
       intensity={flashlightOn ? 18 : 0}
-      castShadow={settings.graphicsQuality === 'high'}
-      shadow-mapSize={[1024, 1024]}
+      castShadow={qProfile.shadowsEnabled}
+      shadow-mapSize={[qProfile.shadowMapSize, qProfile.shadowMapSize]}
       shadow-bias={-0.0004}
     />
   );

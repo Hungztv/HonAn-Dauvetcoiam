@@ -1,9 +1,21 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Lock, Unlock, ChevronUp, ChevronDown, CheckCircle2, AlertTriangle, RotateCcw } from 'lucide-react';
+import {
+  X,
+  Lock,
+  Unlock,
+  ChevronUp,
+  ChevronDown,
+  CheckCircle2,
+  AlertTriangle,
+  RotateCcw,
+  Lightbulb,
+  Scale,
+} from 'lucide-react';
 import { LevelData } from '../types/game';
 import { useGameStore } from '../store/gameStore';
 import { horrorAudio } from '../audio/horrorAudio';
+import { MoralChoiceValueMap } from '../data/narrativePack';
 
 interface PuzzleModalProps {
   level: LevelData;
@@ -13,8 +25,10 @@ interface PuzzleModalProps {
 export const PuzzleModal: React.FC<PuzzleModalProps> = ({ level, puzzleId }) => {
   const closePuzzle = useGameStore((s) => s.closePuzzle);
   const markPuzzleSolved = useGameStore((s) => s.markPuzzleSolved);
+  const makeMoralChoice = useGameStore((s) => s.makeMoralChoice);
   const setOverlay = useGameStore((s) => s.setOverlay);
   const setJournalTab = useGameStore((s) => s.setJournalTab);
+  const narrative = useGameStore((s) => s.narrative);
   const progress = useGameStore((s) => s.progressByLevel[level.id]);
 
   const puzzle =
@@ -26,16 +40,13 @@ export const PuzzleModal: React.FC<PuzzleModalProps> = ({ level, puzzleId }) => 
 
   const alreadySolved = progress?.solvedPuzzleIds.includes(puzzleId) ?? false;
 
-  // Code lock state
   const [dialIndices, setDialIndices] = useState<number[]>(() =>
     puzzle?.kind === 'code_lock' ? puzzle.dials.map(() => 0) : []
   );
-
-  // Sequence state
   const [chosenSequence, setChosenSequence] = useState<string[]>([]);
-
-  // Deduction state
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [selectedMoralVal, setSelectedMoralVal] = useState<string>('');
+  const [hintTier, setHintTier] = useState<0 | 1 | 2 | 3>(0);
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [solvedBanner, setSolvedBanner] = useState<string | null>(
@@ -43,6 +54,11 @@ export const PuzzleModal: React.FC<PuzzleModalProps> = ({ level, puzzleId }) => 
   );
 
   if (!puzzle) return null;
+
+  const existingMoralChoice =
+    puzzle.kind === 'deduction' && puzzle.moralChoice
+      ? narrative.moralChoices[puzzle.moralChoice.choiceId]
+      : undefined;
 
   const shiftDial = (dialIdx: number, dir: 1 | -1) => {
     if (puzzle.kind !== 'code_lock' || alreadySolved) return;
@@ -89,7 +105,7 @@ export const PuzzleModal: React.FC<PuzzleModalProps> = ({ level, puzzleId }) => 
       markPuzzleSolved(puzzle.id);
     } else {
       horrorAudio.playError();
-      setErrorMsg('Trình tự nghi thức sai lệch — tiếng gỗ rền vang lạnh lẽo. Hãy kiểm tra lại manh mối!');
+      setErrorMsg('Trình tự nghi thức sai lệch — tiếng gỗ rền vang lạnh lẽo. Hãy kiểm tra lại Bảng Kết Nối!');
       setChosenSequence([]);
     }
   };
@@ -98,17 +114,33 @@ export const PuzzleModal: React.FC<PuzzleModalProps> = ({ level, puzzleId }) => 
     if (puzzle.kind !== 'deduction') return;
     const unanswered = puzzle.questions.some((q) => !answers[q.id]);
     if (unanswered) {
-      setErrorMsg('Hãy trả lời đầy đủ tất cả các suy luận để đối mặt với sự thật.');
+      setErrorMsg('Hãy trả lời đầy đủ tất cả các suy luận để xác lập Chân Lý Cốt Lõi.');
       return;
     }
     const allCorrect = puzzle.questions.every((q) => answers[q.id] === q.correctOptionId);
-    if (allCorrect) {
-      setSolvedBanner(puzzle.successNarrative);
-      markPuzzleSolved(puzzle.id);
-    } else {
+    if (!allCorrect) {
       horrorAudio.playError();
       setErrorMsg('Có điểm chưa trùng khớp với chứng cứ hiện trường. Hãy mở Sổ điều tra để đối chiếu kỹ hơn.');
+      return;
     }
+
+    // Lock irreversible moral choice if required for this level
+    if (puzzle.moralChoice && !existingMoralChoice) {
+      if (!selectedMoralVal) {
+        setErrorMsg('Hãy đưa ra Lựa Chọn Đạo Đức trước khi hoàn tất vụ án (lựa chọn này sẽ bị khóa vĩnh viễn cho lượt chơi này).');
+        return;
+      }
+      const cid = puzzle.moralChoice.choiceId;
+      makeMoralChoice(cid, selectedMoralVal as MoralChoiceValueMap[typeof cid]);
+    }
+
+    setSolvedBanner(puzzle.successNarrative);
+    markPuzzleSolved(puzzle.id);
+  };
+
+  const revealNextHint = () => {
+    horrorAudio.playClick();
+    setHintTier((prev) => (prev < 3 ? ((prev + 1) as 1 | 2 | 3) : 3));
   };
 
   return (
@@ -118,7 +150,7 @@ export const PuzzleModal: React.FC<PuzzleModalProps> = ({ level, puzzleId }) => 
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-40 flex items-center justify-center bg-black/85 backdrop-blur-md p-4"
     >
-      <div className="w-full max-w-2xl max-h-[88vh] bg-[#130e0b] border border-[#6e472a] rounded-lg shadow-[0_0_80px_rgba(0,0,0,0.95)] flex flex-col overflow-hidden">
+      <div className="w-full max-w-2xl max-h-[90vh] bg-[#130e0b] border border-[#6e472a] rounded-lg shadow-[0_0_80px_rgba(0,0,0,0.95)] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 bg-[#1b130e] border-b border-[#4d321e]">
           <div className="flex items-center gap-3">
@@ -146,17 +178,55 @@ export const PuzzleModal: React.FC<PuzzleModalProps> = ({ level, puzzleId }) => 
         <div className="p-6 overflow-y-auto space-y-5">
           <p className="text-sm text-[#d9ceb6] leading-relaxed">{puzzle.subtitle}</p>
 
-          <div className="p-3 rounded bg-[#1a130e] border border-[#453020] text-xs text-amber-200/90 flex items-center justify-between gap-3">
-            <span>Gợi ý: {puzzle.hintNote}</span>
-            <button
-              onClick={() => {
-                setJournalTab('clues');
-                setOverlay('journal');
-              }}
-              className="shrink-0 px-2.5 py-1 rounded bg-[#2d1e14] hover:bg-[#3d291b] border border-[#6e4c30] text-[11px] text-amber-100 cursor-pointer"
-            >
-              Xem Sổ điều tra
-            </button>
+          {/* 3-Level Progressive Hint Box */}
+          <div className="p-3.5 rounded bg-[#1a130e] border border-[#453020] space-y-2 text-xs">
+            <div className="flex items-center justify-between gap-2">
+              <span className="flex items-center gap-1.5 text-amber-300 font-medium">
+                <Lightbulb className="w-3.5 h-3.5" />
+                Gợi ý từng cấp độ ({hintTier}/3)
+              </span>
+              <div className="flex items-center gap-2">
+                {hintTier < 3 && (
+                  <button
+                    onClick={revealNextHint}
+                    className="px-2.5 py-1 rounded bg-amber-950/70 hover:bg-amber-900/70 border border-amber-700/60 text-[11px] text-amber-100 cursor-pointer"
+                  >
+                    Mở gợi ý cấp {hintTier + 1}
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setJournalTab('board');
+                    setOverlay('journal');
+                  }}
+                  className="px-2.5 py-1 rounded bg-[#2d1e14] hover:bg-[#3d291b] border border-[#6e4c30] text-[11px] text-amber-100 cursor-pointer"
+                >
+                  Mở Sổ điều tra
+                </button>
+              </div>
+            </div>
+
+            {hintTier === 0 && (
+              <p className="text-[#9e9079] italic">
+                Chưa mở gợi ý — hãy tự suy luận từ Sổ điều tra hoặc bấm mở gợi ý từng bước nếu cần.
+              </p>
+            )}
+            {hintTier >= 1 && (
+              <p className="text-[#dfd4bc]">
+                <strong className="text-amber-300">Cấp 1 (Hướng quan sát):</strong>{' '}
+                {puzzle.hints?.level1 ?? puzzle.hintNote}
+              </p>
+            )}
+            {hintTier >= 2 && puzzle.hints && (
+              <p className="text-[#dfd4bc]">
+                <strong className="text-amber-300">Cấp 2 (Nhóm vật chứng):</strong> {puzzle.hints.level2}
+              </p>
+            )}
+            {hintTier >= 3 && puzzle.hints && (
+              <p className="text-amber-100">
+                <strong className="text-red-300">Cấp 3 (Logic suy luận):</strong> {puzzle.hints.level3}
+              </p>
+            )}
           </div>
 
           {/* CODE LOCK UI */}
@@ -249,7 +319,7 @@ export const PuzzleModal: React.FC<PuzzleModalProps> = ({ level, puzzleId }) => 
             </div>
           )}
 
-          {/* TIER 3 DEDUCTION UI */}
+          {/* TIER 3 DEDUCTION + MORAL CHOICE UI */}
           {puzzle.kind === 'deduction' && !solvedBanner && (
             <div className="space-y-5">
               {puzzle.questions.map((q, qIdx) => (
@@ -282,11 +352,53 @@ export const PuzzleModal: React.FC<PuzzleModalProps> = ({ level, puzzleId }) => 
                 </div>
               ))}
 
+              {/* Irreversible Moral Choice Block (Levels 2, 4, 5) */}
+              {puzzle.moralChoice && (
+                <div className="p-4 rounded bg-red-950/25 border-2 border-red-800/75 space-y-3">
+                  <div className="flex items-center gap-2 text-amber-300 font-serif-vn text-lg font-bold">
+                    <Scale className="w-5 h-5 text-red-400" />
+                    {puzzle.moralChoice.title}
+                  </div>
+                  <p className="text-xs text-[#e5dac2] leading-relaxed">
+                    {puzzle.moralChoice.prompt}
+                  </p>
+                  {existingMoralChoice ? (
+                    <div className="p-3 rounded bg-black/50 border border-amber-700/60 text-xs text-amber-200">
+                      Lựa chọn đã được khóa cho lượt chơi này: <strong>{existingMoralChoice}</strong> (không thể ghi đè).
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {puzzle.moralChoice.options.map((opt) => {
+                        const active = selectedMoralVal === opt.value;
+                        return (
+                          <button
+                            key={opt.value}
+                            onClick={() => {
+                              horrorAudio.playClick();
+                              setErrorMsg(null);
+                              setSelectedMoralVal(opt.value);
+                            }}
+                            className={`w-full text-left p-3 rounded border transition cursor-pointer ${
+                              active
+                                ? 'bg-amber-950/70 border-amber-400 text-amber-100'
+                                : 'bg-[#120d0a] border-[#4d3322] hover:border-amber-600/70 text-[#dfd4bc]'
+                            }`}
+                          >
+                            <div className="text-xs font-semibold">{opt.label}</div>
+                            <div className="text-[11px] text-[#b5a78e] mt-0.5">{opt.consequenceHint}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <button
                 onClick={handleSubmitDeduction}
                 className="w-full py-3.5 rounded bg-red-900 hover:bg-red-800 text-[#f7eedb] font-semibold tracking-wider uppercase text-xs transition cursor-pointer"
               >
-                Công bố sự thật & Hóa giải án oan
+                Xác nhận Sự Thật & Chốt Quyết Định
               </button>
             </div>
           )}

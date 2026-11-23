@@ -106,9 +106,11 @@ export const MainMenu: React.FC = () => {
   const currentLevelId = useGameStore((s) => s.currentLevelId);
   const unlockedLevelIds = useGameStore((s) => s.unlockedLevelIds);
   const progressByLevel = useGameStore((s) => s.progressByLevel);
+  const narrative = useGameStore((s) => s.narrative);
   const settings = useGameStore((s) => s.settings);
 
   const startNewGame = useGameStore((s) => s.startNewGame);
+  const startNewGamePlus = useGameStore((s) => s.startNewGamePlus);
   const continueGame = useGameStore((s) => s.continueGame);
   const selectLevel = useGameStore((s) => s.selectLevel);
   const updateSettings = useGameStore((s) => s.updateSettings);
@@ -181,6 +183,22 @@ export const MainMenu: React.FC = () => {
             </span>
           </button>
 
+          {narrative.ngPlusUnlocked && (
+            <button
+              onClick={() => {
+                handleClickSound();
+                startNewGamePlus();
+              }}
+              className="group flex items-center justify-between px-5 py-3.5 rounded bg-amber-950/85 hover:bg-amber-900/90 border border-amber-600/80 text-amber-100 transition cursor-pointer shadow-lg"
+            >
+              <span className="flex items-center gap-3 font-semibold tracking-wider uppercase text-sm">
+                <RotateCcw className="w-4 h-4 text-amber-300" />
+                New Game+ ({narrative.completedEndings.length}/3 kết cục)
+              </span>
+              <span className="text-[11px] text-amber-200">★</span>
+            </button>
+          )}
+
           <button
             onClick={() => {
               handleClickSound();
@@ -216,8 +234,8 @@ export const MainMenu: React.FC = () => {
         </nav>
 
         <div className="text-[11px] text-[#8f816c] space-y-1">
-          <p>Khuyến nghị đeo tai nghe để trải nghiệm âm thanh 3D kinh dị tâm lý.</p>
-          <p className="text-[#6b6050]">3D First-Person Investigation • 5 Vụ Án • Giải Đố 3 Tầng</p>
+          <p>Khuyến nghị đeo tai nghe để trải nghiệm âm thanh 3D HRTF kinh dị tâm lý.</p>
+          <p className="text-[#6b6050]">HỒN ÁN v4.0 – CINEMATIC HORROR EDITION • 5 Vụ Án • 3 Kết Cục • New Game+</p>
         </div>
       </div>
 
@@ -310,7 +328,7 @@ export const MainMenu: React.FC = () => {
                 )}
 
                 {subModal === 'settings' && (
-                  <div className="space-y-5 text-sm">
+                  <div className="space-y-4 text-sm">
                     <div className="flex items-center justify-between gap-4">
                       <label className="flex items-center gap-2 text-[#dfd4bc]">
                         <Volume2 className="w-4 h-4 text-amber-400" />
@@ -323,6 +341,30 @@ export const MainMenu: React.FC = () => {
                         step={0.05}
                         value={settings.masterVolume}
                         onChange={(e) => updateSettings({ masterVolume: parseFloat(e.target.value) })}
+                        className="w-48 accent-red-700"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <label className="text-[#dfd4bc] pl-6">Nhạc nền & Không khí ({Math.round(settings.musicVolume * 100)}%)</label>
+                      <input
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        value={settings.musicVolume}
+                        onChange={(e) => updateSettings({ musicVolume: parseFloat(e.target.value) })}
+                        className="w-48 accent-red-700"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <label className="text-[#dfd4bc] pl-6">Hiệu ứng âm thanh SFX ({Math.round(settings.sfxVolume * 100)}%)</label>
+                      <input
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        value={settings.sfxVolume}
+                        onChange={(e) => updateSettings({ sfxVolume: parseFloat(e.target.value) })}
                         className="w-48 accent-red-700"
                       />
                     </div>
@@ -344,36 +386,81 @@ export const MainMenu: React.FC = () => {
                     <div className="flex items-center justify-between gap-4">
                       <label className="flex items-center gap-2 text-[#dfd4bc]">
                         <Monitor className="w-4 h-4 text-amber-400" />
-                        Chất lượng đổ bóng 3D
+                        Chất lượng đồ họa 3D
                       </label>
                       <select
                         value={settings.graphicsQuality}
                         onChange={(e) =>
-                          updateSettings({ graphicsQuality: e.target.value as 'high' | 'medium' })
+                          updateSettings({
+                            graphicsQuality: e.target.value as 'low' | 'medium' | 'high' | 'ultra',
+                          })
                         }
                         className="bg-[#1d1510] border border-[#593d27] rounded px-3 py-1.5 text-xs text-[#efe4cc]"
                       >
-                        <option value="high">Cao (Đổ bóng đèn pin động)</option>
-                        <option value="medium">Trung bình (Tối ưu FPS)</option>
+                        <option value="low">LOW (Tối đa FPS, tắt Post-FX)</option>
+                        <option value="medium">MEDIUM (Ổn định cho máy phổ thông)</option>
+                        <option value="high">HIGH (PBR + Bloom + Chromatic)</option>
+                        <option value="ultra">ULTRA (Shadow 2048 + Hiệu ứng tối đa)</option>
                       </select>
                     </div>
                     <div className="flex items-center justify-between gap-4">
-                      <label className="text-[#dfd4bc]">Hiển thị mục tiêu trên HUD</label>
+                      <label className="text-[#dfd4bc]">Tỷ lệ phân giải ({Math.round(settings.resolutionScale * 100)}%)</label>
                       <input
-                        type="checkbox"
-                        checked={settings.showHints}
-                        onChange={(e) => updateSettings({ showHints: e.target.checked })}
-                        className="w-4 h-4 accent-red-700"
+                        type="range"
+                        min={0.6}
+                        max={1.25}
+                        step={0.05}
+                        value={settings.resolutionScale}
+                        onChange={(e) => updateSettings({ resolutionScale: parseFloat(e.target.value) })}
+                        className="w-48 accent-red-700"
                       />
                     </div>
-                    <div className="flex items-center justify-between gap-4">
-                      <label className="text-[#dfd4bc]">Bật tình huống Jumpscare</label>
-                      <input
-                        type="checkbox"
-                        checked={settings.enableJumpscares}
-                        onChange={(e) => updateSettings({ enableJumpscares: e.target.checked })}
-                        className="w-4 h-4 accent-red-700"
-                      />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#3a281a] text-xs">
+                      <label className="flex items-center justify-between gap-2 text-[#dfd4bc]">
+                        <span>Rung camera (Camera Shake)</span>
+                        <input
+                          type="checkbox"
+                          checked={settings.cameraShake}
+                          onChange={(e) => updateSettings({ cameraShake: e.target.checked })}
+                          className="w-4 h-4 accent-red-700"
+                        />
+                      </label>
+                      <label className="flex items-center justify-between gap-2 text-[#dfd4bc]">
+                        <span>Giảm hiệu ứng nhấp nháy</span>
+                        <input
+                          type="checkbox"
+                          checked={settings.reduceFlashing}
+                          onChange={(e) => updateSettings({ reduceFlashing: e.target.checked })}
+                          className="w-4 h-4 accent-red-700"
+                        />
+                      </label>
+                      <label className="flex items-center justify-between gap-2 text-[#dfd4bc]">
+                        <span>Bật tình huống Jumpscare</span>
+                        <input
+                          type="checkbox"
+                          checked={settings.enableJumpscares}
+                          onChange={(e) => updateSettings({ enableJumpscares: e.target.checked })}
+                          className="w-4 h-4 accent-red-700"
+                        />
+                      </label>
+                      <label className="flex items-center justify-between gap-2 text-[#dfd4bc]">
+                        <span>Hiển thị mục tiêu HUD</span>
+                        <input
+                          type="checkbox"
+                          checked={settings.showHints}
+                          onChange={(e) => updateSettings({ showHints: e.target.checked })}
+                          className="w-4 h-4 accent-red-700"
+                        />
+                      </label>
+                      <label className="flex items-center justify-between gap-2 text-[#dfd4bc]">
+                        <span>Hiển thị thông số FPS / GPU</span>
+                        <input
+                          type="checkbox"
+                          checked={settings.showPerfStats}
+                          onChange={(e) => updateSettings({ showPerfStats: e.target.checked })}
+                          className="w-4 h-4 accent-red-700"
+                        />
+                      </label>
                     </div>
                   </div>
                 )}

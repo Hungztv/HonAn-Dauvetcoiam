@@ -120,23 +120,29 @@ const JumpscareArt: React.FC<{ variant: JumpscareVariant }> = ({ variant }) => {
 
 export const JumpscareOverlay: React.FC = () => {
   const activeJumpscare = useGameStore((s) => s.activeJumpscare);
+  const reduceFlashing = useGameStore((s) => s.settings.reduceFlashing);
+  const cameraShake = useGameStore((s) => s.settings.cameraShake);
 
   return (
     <AnimatePresence>
       {activeJumpscare && (
         <motion.div
           key={activeJumpscare.startedAt}
-          initial={{ opacity: 0, scale: 0.72 }}
+          initial={{ opacity: 0, scale: 0.78 }}
           animate={{
-            opacity: [0, 1, 0.35, 1, 0.85, 1, 0],
-            scale: [0.75, 1.24, 1.15, 1.32, 1.18, 1.28, 1.4],
+            opacity: reduceFlashing ? [0, 0.92, 0.9, 0] : [0, 1, 0.35, 1, 0.85, 1, 0],
+            scale: reduceFlashing ? [0.88, 1.08, 1.12, 1.16] : [0.75, 1.24, 1.15, 1.32, 1.18, 1.28, 1.4],
           }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.92, times: [0, 0.08, 0.18, 0.3, 0.55, 0.78, 1] }}
-          className="pointer-events-none fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/92 overflow-hidden jumpscare-shake"
+          transition={{ duration: 0.92 }}
+          className={`pointer-events-none fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/92 overflow-hidden ${
+            cameraShake ? 'jumpscare-shake' : ''
+          }`}
         >
-          {/* Red & white horror strobe flash */}
-          <div className="absolute inset-0 bg-red-900/45 mix-blend-hard-light jumpscare-strobe" />
+          {/* Red & white horror strobe flash (disabled when Reduce Flashing is on) */}
+          {!reduceFlashing && (
+            <div className="absolute inset-0 bg-red-900/45 mix-blend-hard-light jumpscare-strobe" />
+          )}
 
           {/* Apparition Graphic */}
           <div className="relative z-10 flex flex-col items-center">

@@ -21,6 +21,8 @@ export const HUD: React.FC<HUDProps> = ({ level, onRequestLock }) => {
   const activeWhisper = useGameStore((s) => s.activeWhisper);
   const notifications = useGameStore((s) => s.notifications);
   const settings = useGameStore((s) => s.settings);
+  const narrative = useGameStore((s) => s.narrative);
+  const perfStats = useGameStore((s) => s.perfStats);
   const setOverlay = useGameStore((s) => s.setOverlay);
   const progress = useGameStore((s) => s.progressByLevel[level.id]);
 
@@ -70,8 +72,25 @@ export const HUD: React.FC<HUDProps> = ({ level, onRequestLock }) => {
             <span>Vật chứng: {collectedCount}/{level.evidences.length}</span>
             <span>•</span>
             <span>Manh mối: {cluesCount}/{level.clues.length}</span>
+            {narrative.isNewGamePlus && (
+              <>
+                <span>•</span>
+                <span className="text-amber-300 font-semibold">NG+</span>
+              </>
+            )}
           </div>
         </div>
+
+        {/* Real Measured GPU / FPS Telemetry Panel (when toggled on in Settings) */}
+        {settings.showPerfStats && (
+          <div className="bg-black/70 border border-[#3d2b1d] px-3 py-1.5 rounded text-[10px] font-mono text-emerald-300/90 flex items-center gap-3">
+            <span>{perfStats.fps} FPS</span>
+            <span>{perfStats.frameTimeMs}ms</span>
+            <span>DC: {perfStats.drawCalls}</span>
+            <span>Tri: {perfStats.triangles.toLocaleString()}</span>
+            <span className="uppercase text-amber-300">{settings.graphicsQuality}</span>
+          </div>
+        )}
       </div>
 
       {/* Top Right: Quick Access Buttons (clickable when unlocked) + Flashlight Battery */}

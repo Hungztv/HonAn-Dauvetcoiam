@@ -3,20 +3,36 @@ import {
   ActiveOverlay,
   GameScreen,
   GameSettings,
+  GraphicsPreset,
   JumpscareVariant,
   LevelProgress,
   TargetInteractable,
   Vec3,
 } from '../types/game';
 import { LEVELS, getLevelById } from '../data/levels';
+import {
+  CoreTruthId,
+  MoralChoiceId,
+  MoralChoiceValueMap,
+  NarrativeState,
+  applyMoralChoice,
+  completeGameWithEnding,
+  createInitialNarrativeState,
+  sanitizeNarrativeState,
+  startNewGamePlusRun,
+  unlockCoreTruth,
+} from '../data/narrativePack';
 import { horrorAudio } from '../audio/horrorAudio';
 
-const SAVE_KEY = 'hon_an_save_v1';
+export const SAVE_KEY = 'hon_an_save_v1';
+export const SAVE_SCHEMA_VERSION = 4;
 
-interface SavedPayload {
+export interface SavedPayload {
+  schemaVersion: number;
   currentLevelId: number;
   unlockedLevelIds: number[];
   progressByLevel: Record<number, LevelProgress>;
+  narrative: NarrativeState;
   settings: GameSettings;
   savedAt: number;
 }
@@ -28,12 +44,49 @@ export interface ToastNotification {
   tone: 'clue' | 'evidence' | 'tier' | 'horror' | 'info';
 }
 
-function createDefaultProgress(levelId: number): LevelProgress {
+export interface PerfStats {
+  fps: number;
+  frameTimeMs: number;
+  drawCalls: number;
+  triangles: number;
+}
+
+export const defaultSettings: GameSettings = {
+  masterVolume: 0.75,
+  musicVolume: 0.75,
+  sfxVolume: 0.85,
+  mouseSensitivity: 1.0,
+  graphicsQuality: 'high',
+  resolutionScale: 1.0,
+  cameraShake: true,
+  reduceFlashing: false,
+  showHints: true,
+  enableJumpscares: true,
+  showPerfStats: false,
+};
+
+function dedupeStrings(arr: unknown): string[] {
+  if (!Array.isArray(arr)) return [];
+  const out: string[] = [];
+  for (const item of arr) {
+    if (typeof item === 'string' && !out.includes(item)) {
+      out.push(item);
+    }
+  }
+  return out;
+}
+
+function clamp(val: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, val));
+}
+
+export function createDefaultProgress(levelId: number): LevelProgress {
   const lvl = getLevelById(levelId);
   return {
     collectedEvidenceIds: [],
     discoveredHotspotIds: [],
     unlockedClueIds: [],
+    readClueIds: [],
     solvedConnectionIds: [],
     solvedPuzzleIds: [],
     openDoorIds: [],
@@ -44,13 +97,140 @@ function createDefaultProgress(levelId: number): LevelProgress {
   };
 }
 
+function sanitizeSettings(raw: unknown): GameSettings {
+  if (!raw || typeof raw !== 'object') return { ...defaultSettings };
+  const s = raw as Record<string, unknown>;
+  const validPresets: GraphicsPreset[] = ['low', 'medium', 'high', 'ultra'];
+  const graphicsQuality: GraphicsPreset =
+    typeof s.graphicsQuality === 'string' && validPresets.includes(s.graphicsQuality as GraphicsPreset)
+      ? (s.graphicsQuality as GraphicsPreset)
+      : defaultSettings.graphicsQuality;
+
+  return {
+    masterVolume: typeof s.masterVolume === 'number' && Number.isFinite(s.masterVolume) ? clamp(s.masterVolume, 0, 1) : defaultSettings.masterVolume,
+    musicVolume: typeof s.musicVolume === 'number' && Number.isFinite(s.musicVolume) ? clamp(s.musicVolume, 0, 1) : defaultSettings.musicVolume,
+    sfxVolume: typeof s.sfxVolume === 'number' && Number.isFinite(s.sfxVolume) ? clamp(s.sfxVolume, 0, 1) : defaultSettings.sfxVolume,
+    mouseSensitivity:
+      typeof s.mouseSensitivity === 'number' && Number.isFinite(s.mouseSensitivity)
+        ? clamp(s.mouseSensitivity, 0.3, 2.5)
+        : defaultSettings.mouseSensitivity,
+    graphicsQuality,
+    resolutionScale:
+      typeof s.resolutionScale === 'number' && Number.isFinite(s.resolutionScale)
+        ? clamp(s.resolutionScale, 0.5, 1.5)
+        : defaultSettings.resolutionScale,
+    cameraShake: typeof s.cameraShake === 'boolean' ? s.cameraShake : defaultSettings.cameraShake,
+    reduceFlashing: typeof s.reduceFlashing === 'boolean' ? s.reduceFlashing : defaultSettings.reduceFlashing,
+    showHints: typeof s.showHints === 'boolean' ? s.showHints : defaultSettings.showHints,
+    enableJumpscares: typeof s.enableJumpscares === 'boolean' ? s.enableJumpscares : defaultSettings.enableJumpscares,
+    showPerfStats: typeof s.showPerfStats === 'boolean' ? s.showPerfStats : defaultSettings.showPerfStats,
+  };
+}
+
+function sanitizeLevelProgress(levelId: number, raw: unknown): LevelProgress {
+  const base = createDefaultProgress(levelId);
+  if (!raw || typeof raw !== 'object') return base;
+  const p = raw as Record<string, unknown>;
+  const lvl = getLevelById(levelId);
+
+  let pos: Vec3 = base.playerPosition;
+  if (
+    Array.isArray(p.playerPosition) &&
+    p.playerPosition.length === 3 &&
+    p.playerPosition.every((n) => typeof n === 'number' && Number.isFinite(n))
+  ) {
+    if (lvl) {
+      pos = [
+        clamp(p.playerPosition[0], lvl.bounds.minX + 0.5, lvl.bounds.maxX - 0.5),
+        clamp(p.playerPosition[1], 1.0, 2.2),
+        clamp(p.playerPosition[2], lvl.bounds.minZ + 0.5, lvl.bounds.maxZ - 0.5),
+      ];
+    } else {
+      pos = [p.playerPosition[0], p.playerPosition[1], p.playerPosition[2]];
+    }
+  }
+
+  const tier = p.currentTier === 1 || p.currentTier === 2 || p.currentTier === 3 ? p.currentTier : 1;
+
+  return {
+    collectedEvidenceIds: dedupeStrings(p.collectedEvidenceIds),
+    discoveredHotspotIds: dedupeStrings(p.discoveredHotspotIds),
+    unlockedClueIds: dedupeStrings(p.unlockedClueIds),
+    readClueIds: dedupeStrings(p.readClueIds),
+    solvedConnectionIds: dedupeStrings(p.solvedConnectionIds),
+    solvedPuzzleIds: dedupeStrings(p.solvedPuzzleIds),
+    openDoorIds: dedupeStrings(p.openDoorIds),
+    currentTier: tier,
+    completed: Boolean(p.completed),
+    playerPosition: pos,
+    playerYaw: typeof p.playerYaw === 'number' && Number.isFinite(p.playerYaw) ? p.playerYaw : base.playerYaw,
+  };
+}
+
+/**
+ * Migrates & validates legacy (v1) or current (v4) save JSON safely.
+ * Returns null if JSON is corrupted or unusable without crashing.
+ */
+export function migrateAndSanitizeSave(rawJson: string | null): SavedPayload | null {
+  if (!rawJson || typeof rawJson !== 'string') return null;
+  try {
+    const parsed = JSON.parse(rawJson) as Record<string, unknown>;
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (typeof parsed.currentLevelId !== 'number' || !Number.isFinite(parsed.currentLevelId)) return null;
+
+    const currentLevelId = clamp(Math.floor(parsed.currentLevelId), 1, LEVELS.length);
+
+    const unlockedRaw = Array.isArray(parsed.unlockedLevelIds) ? parsed.unlockedLevelIds : [1];
+    const unlockedSet = new Set<number>([1]);
+    for (const id of unlockedRaw) {
+      if (typeof id === 'number' && Number.isInteger(id) && id >= 1 && id <= LEVELS.length) {
+        unlockedSet.add(id);
+      }
+    }
+    unlockedSet.add(currentLevelId);
+
+    const progressByLevel: Record<number, LevelProgress> = {};
+    const rawProgMap =
+      parsed.progressByLevel && typeof parsed.progressByLevel === 'object'
+        ? (parsed.progressByLevel as Record<string, unknown>)
+        : {};
+    for (const lvl of LEVELS) {
+      if (rawProgMap[String(lvl.id)]) {
+        progressByLevel[lvl.id] = sanitizeLevelProgress(lvl.id, rawProgMap[String(lvl.id)]);
+      }
+    }
+    if (!progressByLevel[currentLevelId]) {
+      progressByLevel[currentLevelId] = createDefaultProgress(currentLevelId);
+    }
+
+    // Migrate narrative state (and retroactively award Core Truths for completed legacy levels!)
+    let narrative = sanitizeNarrativeState(parsed.narrative);
+    for (const lvl of LEVELS) {
+      const lp = progressByLevel[lvl.id];
+      const truthId = lvl.tier3Puzzle.unlocksCoreTruthId;
+      if (lp?.completed && truthId) {
+        narrative = unlockCoreTruth(narrative, truthId);
+      }
+    }
+
+    return {
+      schemaVersion: SAVE_SCHEMA_VERSION,
+      currentLevelId,
+      unlockedLevelIds: Array.from(unlockedSet).sort((a, b) => a - b),
+      progressByLevel,
+      narrative,
+      settings: sanitizeSettings(parsed.settings),
+      savedAt: typeof parsed.savedAt === 'number' && Number.isFinite(parsed.savedAt) ? parsed.savedAt : Date.now(),
+    };
+  } catch {
+    return null;
+  }
+}
+
 function loadSavedState(): SavedPayload | null {
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as SavedPayload;
-    if (!parsed || typeof parsed.currentLevelId !== 'number') return null;
-    return parsed;
+    if (typeof window === 'undefined' || !window.localStorage) return null;
+    return migrateAndSanitizeSave(window.localStorage.getItem(SAVE_KEY));
   } catch {
     return null;
   }
@@ -62,6 +242,7 @@ interface GameState {
   currentLevelId: number;
   unlockedLevelIds: number[];
   progressByLevel: Record<number, LevelProgress>;
+  narrative: NarrativeState;
   hasSaveData: boolean;
 
   // Live gameplay state
@@ -74,11 +255,12 @@ interface GameState {
   activePuzzleId: string | null;
   journalTab: 'case' | 'evidence' | 'clues' | 'suspects' | 'board';
   targetedInteractable: TargetInteractable | null;
+  perfStats: PerfStats;
 
   // Dynamic Horror & Jumpscare state
-  horrorIntensity: number; // 0 to 1
+  horrorIntensity: number;
   activeWhisper: string | null;
-  supernaturalGlitch: number; // 0 to 1 transient spike
+  supernaturalGlitch: number;
   extinguishedLampIds: string[];
   activeJumpscare: {
     variant: JumpscareVariant;
@@ -95,6 +277,7 @@ interface GameState {
 
   // Actions
   startNewGame: () => void;
+  startNewGamePlus: () => void;
   continueGame: () => void;
   selectLevel: (levelId: number, resetProgress?: boolean) => void;
   beginLevelPlayback: () => void;
@@ -104,6 +287,7 @@ interface GameState {
   setJournalTab: (tab: 'case' | 'evidence' | 'clues' | 'suspects' | 'board') => void;
   setPointerLocked: (locked: boolean) => void;
   setTargetedInteractable: (target: TargetInteractable | null) => void;
+  setPerfStats: (stats: PerfStats) => void;
 
   toggleFlashlight: () => void;
   drainFlashlight: (delta: number) => void;
@@ -116,7 +300,12 @@ interface GameState {
   closeInspect: () => void;
   discoverHotspot: (evidenceId: string, hotspotId: string) => void;
   unlockClue: (clueId: string) => void;
+  markClueRead: (clueId: string) => void;
   attemptBoardConnection: (clueA: string, clueB: string) => { success: boolean; message: string };
+
+  // Narrative & Moral Actions
+  makeMoralChoice: <K extends MoralChoiceId>(choiceId: K, value: MoralChoiceValueMap[K]) => boolean;
+  grantCoreTruth: (truthId: CoreTruthId) => void;
 
   // World & Puzzle Actions
   interactDoor: (doorId: string) => void;
@@ -141,23 +330,24 @@ interface GameState {
   getCurrentProgress: () => LevelProgress;
 }
 
-const initialSaved = typeof window !== 'undefined' ? loadSavedState() : null;
+const initialSaved = loadSavedState();
 
-const defaultSettings: GameSettings = {
-  masterVolume: 0.75,
-  mouseSensitivity: 1.0,
-  graphicsQuality: 'high',
-  showHints: true,
-  enableJumpscares: true,
-};
-
-function computeHorrorIntensity(levelId: number, progress: LevelProgress): number {
+function computeHorrorIntensity(
+  levelId: number,
+  progress: LevelProgress,
+  narrative: NarrativeState
+): number {
   const level = getLevelById(levelId);
   if (!level) return 0.15;
   const clueRatio = Math.min(1, progress.unlockedClueIds.length / Math.max(1, level.clues.length));
   const tierBoost = progress.currentTier === 1 ? 0.1 : progress.currentTier === 2 ? 0.42 : 0.78;
-  return Math.min(1, Math.max(0.12, tierBoost * 0.65 + clueRatio * 0.45));
+  // Moral choice reactivity: negative Chính Khí raises supernatural hostility!
+  const spiritModifier = narrative.spiritScore < 0 ? 0.16 : narrative.spiritScore > 0 ? -0.05 : 0;
+  const ngPlusBoost = narrative.isNewGamePlus ? 0.08 : 0;
+  return clamp(tierBoost * 0.62 + clueRatio * 0.4 + spiritModifier + ngPlusBoost, 0.12, 1);
 }
+
+let lastSaveTimestamp = 0;
 
 export const useGameStore = create<GameState>((set, get) => ({
   screen: 'menu',
@@ -165,6 +355,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   currentLevelId: initialSaved?.currentLevelId ?? 1,
   unlockedLevelIds: initialSaved?.unlockedLevelIds ?? [1],
   progressByLevel: initialSaved?.progressByLevel ?? { 1: createDefaultProgress(1) },
+  narrative: initialSaved?.narrative ?? createInitialNarrativeState(),
   hasSaveData: Boolean(initialSaved),
 
   pointerLocked: false,
@@ -176,6 +367,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   activePuzzleId: null,
   journalTab: 'case',
   targetedInteractable: null,
+  perfStats: { fps: 60, frameTimeMs: 16.6, drawCalls: 0, triangles: 0 },
 
   horrorIntensity: 0.15,
   activeWhisper: null,
@@ -187,7 +379,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   triggeredZoneScares: [],
 
   notifications: [],
-  settings: { ...defaultSettings, ...(initialSaved?.settings ?? {}) },
+  settings: initialSaved?.settings ?? { ...defaultSettings },
 
   getCurrentProgress: () => {
     const { currentLevelId, progressByLevel } = get();
@@ -197,14 +389,19 @@ export const useGameStore = create<GameState>((set, get) => ({
   saveToStorage: () => {
     const state = get();
     try {
+      if (typeof window === 'undefined' || !window.localStorage) return;
+      const sanitizedNarrative = sanitizeNarrativeState(state.narrative);
       const payload: SavedPayload = {
+        schemaVersion: SAVE_SCHEMA_VERSION,
         currentLevelId: state.currentLevelId,
         unlockedLevelIds: state.unlockedLevelIds,
         progressByLevel: state.progressByLevel,
+        narrative: sanitizedNarrative,
         settings: state.settings,
         savedAt: Date.now(),
       };
-      localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
+      window.localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
+      lastSaveTimestamp = Date.now();
       set({ hasSaveData: true });
     } catch {
       // Ignore quota errors
@@ -212,6 +409,12 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   startNewGame: () => {
+    const prevNarrative = get().narrative;
+    const freshNarrative = createInitialNarrativeState({
+      ngPlusUnlocked: prevNarrative.ngPlusUnlocked,
+      ngPlusRunCount: prevNarrative.ngPlusRunCount,
+      completedEndings: prevNarrative.completedEndings,
+    });
     const fresh: Record<number, LevelProgress> = {
       1: createDefaultProgress(1),
     };
@@ -219,6 +422,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       currentLevelId: 1,
       unlockedLevelIds: [1],
       progressByLevel: fresh,
+      narrative: freshNarrative,
       screen: 'chapter_intro',
       overlay: 'none',
       flashlightOn: true,
@@ -229,14 +433,54 @@ export const useGameStore = create<GameState>((set, get) => ({
       extinguishedLampIds: [],
       activeWhisper: null,
       supernaturalGlitch: 0,
+      triggeredZoneScares: [],
       notifications: [],
     });
+    get().saveToStorage();
+  },
+
+  startNewGamePlus: () => {
+    const state = get();
+    if (!state.narrative.ngPlusUnlocked) return;
+    const ngNarrative = startNewGamePlusRun(state.narrative);
+    const fresh: Record<number, LevelProgress> = {
+      1: createDefaultProgress(1),
+    };
+    set({
+      currentLevelId: 1,
+      unlockedLevelIds: [1, 2, 3, 4, 5],
+      progressByLevel: fresh,
+      narrative: ngNarrative,
+      screen: 'chapter_intro',
+      overlay: 'none',
+      flashlightOn: true,
+      flashlightBattery: 100,
+      inspectingEvidenceId: null,
+      activePuzzleId: null,
+      horrorIntensity: 0.24,
+      extinguishedLampIds: [],
+      activeWhisper: null,
+      supernaturalGlitch: 0,
+      triggeredZoneScares: [],
+      notifications: [],
+    });
+    get().pushNotification(
+      'NEW GAME+ KÍCH HOẠT',
+      'Ký ức bị chôn giấu và các ghi chú ẩn của Nguyễn Văn Khải đã bắt đầu hiển lộ...',
+      'tier'
+    );
     get().saveToStorage();
   },
 
   continueGame: () => {
     const state = get();
     const prog = state.progressByLevel[state.currentLevelId] ?? createDefaultProgress(state.currentLevelId);
+    const level = getLevelById(state.currentLevelId);
+    horrorAudio.init();
+    horrorAudio.applyVolumes(state.settings.masterVolume, state.settings.musicVolume, state.settings.sfxVolume);
+    if (level) {
+      horrorAudio.startAmbient(level.ambientTheme);
+    }
     set({
       progressByLevel: {
         ...state.progressByLevel,
@@ -244,7 +488,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       },
       screen: 'playing',
       overlay: 'none',
-      horrorIntensity: computeHorrorIntensity(state.currentLevelId, prog),
+      horrorIntensity: computeHorrorIntensity(state.currentLevelId, prog, state.narrative),
       extinguishedLampIds: [],
       activeWhisper: null,
     });
@@ -254,6 +498,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const state = get();
     const existing = state.progressByLevel[levelId];
     const prog = resetProgress || !existing ? createDefaultProgress(levelId) : existing;
+    horrorAudio.stopAmbient();
     set({
       currentLevelId: levelId,
       progressByLevel: {
@@ -266,7 +511,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       flashlightBattery: 100,
       inspectingEvidenceId: null,
       activePuzzleId: null,
-      horrorIntensity: computeHorrorIntensity(levelId, prog),
+      horrorIntensity: computeHorrorIntensity(levelId, prog, state.narrative),
       extinguishedLampIds: [],
       activeWhisper: null,
       supernaturalGlitch: 0,
@@ -278,7 +523,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const { currentLevelId, settings } = get();
     const level = getLevelById(currentLevelId);
     horrorAudio.init();
-    horrorAudio.setMasterVolume(settings.masterVolume);
+    horrorAudio.applyVolumes(settings.masterVolume, settings.musicVolume, settings.sfxVolume);
     if (level) {
       horrorAudio.startAmbient(level.ambientTheme);
     }
@@ -286,7 +531,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   returnToMenu: () => {
-    if (document.pointerLockElement) {
+    if (typeof document !== 'undefined' && document.pointerLockElement) {
       document.exitPointerLock();
     }
     horrorAudio.stopAmbient();
@@ -298,25 +543,28 @@ export const useGameStore = create<GameState>((set, get) => ({
       inspectingEvidenceId: null,
       activePuzzleId: null,
       targetedInteractable: null,
+      activeJumpscare: null,
     });
   },
 
   setOverlay: (overlay) => {
-    if (overlay !== 'none' && document.pointerLockElement) {
+    if (overlay !== 'none' && typeof document !== 'undefined' && document.pointerLockElement) {
       document.exitPointerLock();
     }
+    horrorAudio.setPaused(overlay === 'pause');
     set({ overlay });
   },
 
   setJournalTab: (journalTab) => set({ journalTab }),
   setPointerLocked: (pointerLocked) => set({ pointerLocked }),
   setTargetedInteractable: (targetedInteractable) => set({ targetedInteractable }),
+  setPerfStats: (perfStats) => set({ perfStats }),
 
   toggleFlashlight: () => {
     const { flashlightOn, flashlightBattery } = get();
     horrorAudio.playClick();
     if (!flashlightOn && flashlightBattery <= 2) {
-      get().pushNotification('Đèn pin cạn pin', 'Hãy tắt đèn một lúc để hồi phục nhẹ pin dự phòng.', 'info');
+      get().pushNotification('Đèn pin cạn pin', 'Hãy tắt đèn vài giây để hồi phục pin dự phòng.', 'info');
       return;
     }
     set({ flashlightOn: !flashlightOn });
@@ -342,10 +590,14 @@ export const useGameStore = create<GameState>((set, get) => ({
   setSprinting: (isSprinting) => set({ isSprinting }),
 
   updatePlayerTransform: (pos, yaw) => {
-    const { currentLevelId, progressByLevel } = get();
-    const prog = progressByLevel[currentLevelId] ?? createDefaultProgress(currentLevelId);
+    const state = get();
+    const prog = state.progressByLevel[state.currentLevelId] ?? createDefaultProgress(state.currentLevelId);
     prog.playerPosition = pos;
     prog.playerYaw = yaw;
+    // Throttled auto-save position every 8s so storage writes don't stutter frames
+    if (Date.now() - lastSaveTimestamp > 8000) {
+      state.saveToStorage();
+    }
   },
 
   openInspect: (evidenceId) => {
@@ -354,7 +606,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const ev = level?.evidences.find((e) => e.id === evidenceId);
     if (!ev) return;
 
-    if (document.pointerLockElement) {
+    if (typeof document !== 'undefined' && document.pointerLockElement) {
       document.exitPointerLock();
     }
 
@@ -376,7 +628,6 @@ export const useGameStore = create<GameState>((set, get) => ({
       }
     }
 
-    // Check Tier 1 -> Tier 2 advancement
     if (prog.currentTier === 1 && level && prog.unlockedClueIds.length >= level.tier1RequiredClues) {
       prog.currentTier = 2;
       horrorAudio.playTierAdvance();
@@ -387,7 +638,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       );
     }
 
-    const horrorIntensity = computeHorrorIntensity(state.currentLevelId, prog);
+    const horrorIntensity = computeHorrorIntensity(state.currentLevelId, prog, state.narrative);
 
     set({
       overlay: 'inspect',
@@ -405,13 +656,12 @@ export const useGameStore = create<GameState>((set, get) => ({
     const pending = get().pendingJumpscare;
     set({ overlay: 'none', inspectingEvidenceId: null, pendingJumpscare: null });
     if (pending && get().settings.enableJumpscares) {
-      // Strike 1.2s after putting the cursed evidence down!
       setTimeout(() => {
         const s = get();
         if (s.screen === 'playing' && s.overlay === 'none') {
           s.triggerJumpscare(pending.variant, pending.caption);
         }
-      }, 1250);
+      }, 1350);
     }
   },
 
@@ -428,14 +678,13 @@ export const useGameStore = create<GameState>((set, get) => ({
     prog.discoveredHotspotIds = [...prog.discoveredHotspotIds, hotspotId];
     horrorAudio.playHotspotFound();
 
-    // Queue a chilling post-inspect jumpscare on pivotal horror discoveries
     const scareMap: Record<string, { variant: JumpscareVariant; caption: string }> = {
-      l1_hs_comb_hair: { variant: 'blood_hands', caption: '“TRẢ LẠI TÓC CHO TÔI...”' },
-      l1_hs_photo_front: { variant: 'pale_bride', caption: '“SAO CHA LẠI XÉ MẶT CON?”' },
+      l1_hs_comb_hair: { variant: 'blood_hands', caption: '“CON ƠI... ĐỪNG QUAY LẠI...”' },
+      l1_hs_photo_front: { variant: 'pale_bride', caption: '“SAO ÔNG LẠI NIÊM PHONG TÔI TRONG BUỒNG ĐÔNG?!”' },
       l2_hs_doll_pin: { variant: 'pale_bride', caption: '“ĐỪNG RÚT KIM RA...”' },
-      l3_hs_rope_cut: { variant: 'blood_hands', caption: '“AI ĐÃ CẮT DÂY GIẾNG?!”' },
+      l3_hs_rope_cut: { variant: 'blood_hands', caption: '“CHÚNG ĐÃ THẢ EM XUỐNG GIẾNG...”' },
       l4_hs_relief_front: { variant: 'statue_face', caption: '“NHÌN RA SAU LƯNG NGƯƠI KIA...”' },
-      l5_hs_token_name: { variant: 'faceless_ferryman', caption: '“ĐẾN LƯỢT NGƯƠI LÊN ĐÒ RỒI!”' },
+      l5_hs_token_name: { variant: 'faceless_ferryman', caption: '“ĐẾN LƯỢT NGƯƠI PHÁN QUYẾT RỒI!”' },
     };
     const queuedScare = scareMap[hotspotId];
     if (queuedScare) {
@@ -460,7 +709,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       );
     }
 
-    const horrorIntensity = computeHorrorIntensity(state.currentLevelId, prog);
+    const horrorIntensity = computeHorrorIntensity(state.currentLevelId, prog, state.narrative);
     set({
       horrorIntensity,
       progressByLevel: {
@@ -482,13 +731,26 @@ export const useGameStore = create<GameState>((set, get) => ({
       state.pushNotification('Ghi nhận manh mối', clue.title, 'clue');
     }
     set({
-      horrorIntensity: computeHorrorIntensity(state.currentLevelId, prog),
+      horrorIntensity: computeHorrorIntensity(state.currentLevelId, prog, state.narrative),
       progressByLevel: {
         ...state.progressByLevel,
         [state.currentLevelId]: prog,
       },
     });
     get().saveToStorage();
+  },
+
+  markClueRead: (clueId) => {
+    const state = get();
+    const prog = { ...(state.progressByLevel[state.currentLevelId] ?? createDefaultProgress(state.currentLevelId)) };
+    if (prog.readClueIds.includes(clueId)) return;
+    prog.readClueIds = [...prog.readClueIds, clueId];
+    set({
+      progressByLevel: {
+        ...state.progressByLevel,
+        [state.currentLevelId]: prog,
+      },
+    });
   },
 
   attemptBoardConnection: (clueA, clueB) => {
@@ -507,7 +769,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       horrorAudio.playError();
       return {
         success: false,
-        message: 'Hai manh mối này chưa tạo thành mối liên hệ trực tiếp. Hãy suy luận kỹ hơn.',
+        message: 'Hai manh mối này chưa tạo thành mối liên hệ trực tiếp. Hãy đối chiếu kỹ mốc năm và chi tiết vật chứng.',
       };
     }
 
@@ -524,7 +786,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     state.pushNotification('Kết nối suy luận thành công', match.title, 'tier');
     set({
-      horrorIntensity: computeHorrorIntensity(state.currentLevelId, prog),
+      horrorIntensity: computeHorrorIntensity(state.currentLevelId, prog, state.narrative),
       progressByLevel: {
         ...state.progressByLevel,
         [state.currentLevelId]: prog,
@@ -532,6 +794,26 @@ export const useGameStore = create<GameState>((set, get) => ({
     });
     get().saveToStorage();
     return { success: true, message: match.deductionText };
+  },
+
+  makeMoralChoice: (choiceId, value) => {
+    const state = get();
+    const { nextState, applied } = applyMoralChoice(state.narrative, choiceId, value);
+    if (!applied) return false;
+
+    const prog = state.progressByLevel[state.currentLevelId] ?? createDefaultProgress(state.currentLevelId);
+    set({
+      narrative: nextState,
+      horrorIntensity: computeHorrorIntensity(state.currentLevelId, prog, nextState),
+    });
+    get().saveToStorage();
+    return true;
+  },
+
+  grantCoreTruth: (truthId) => {
+    const nextNarrative = unlockCoreTruth(get().narrative, truthId);
+    set({ narrative: nextNarrative });
+    get().saveToStorage();
   },
 
   interactDoor: (doorId) => {
@@ -578,13 +860,29 @@ export const useGameStore = create<GameState>((set, get) => ({
       horrorAudio.playError();
       state.pushNotification(
         'Chưa đủ điều kiện đối mặt sự thật',
-        'Hãy hoàn thành cơ chế giải mã Tầng 2 trước khi thực hiện nghi thức/kết luận cuối cùng.',
+        'Hãy hoàn thành cơ chế giải mã Tầng 2 trước khi thực hiện phán quyết cuối cùng.',
         'info'
       );
       return;
     }
 
-    if (document.pointerLockElement) {
+    // Enforce mandatory Connection Board deduction if configured on Tier 2
+    if (level.tier2Puzzle.id === puzzleId && level.tier2Puzzle.requiredConnectionIds?.length) {
+      const missingConn = level.tier2Puzzle.requiredConnectionIds.some(
+        (cid) => !prog.solvedConnectionIds.includes(cid)
+      );
+      if (missingConn) {
+        horrorAudio.playError();
+        state.pushNotification(
+          'Cần liên kết suy luận trước',
+          'Mở Sổ điều tra (Tab) → Bảng Kết Nối để nối cặp manh mối then chốt trước khi mở khóa cơ chế này!',
+          'clue'
+        );
+        return;
+      }
+    }
+
+    if (typeof document !== 'undefined' && document.pointerLockElement) {
       document.exitPointerLock();
     }
     horrorAudio.playClick();
@@ -605,7 +903,6 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     if (puzzleId === level.tier2Puzzle.id) {
       prog.currentTier = 3;
-      // Automatically unseal doors tied to this puzzle and play dramatic sound
       const unlockedDoors = level.doors
         .filter((d) => d.lockedByPuzzleId === puzzleId)
         .map((d) => d.id);
@@ -620,8 +917,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       );
 
       set({
-        horrorIntensity: Math.max(0.82, computeHorrorIntensity(state.currentLevelId, prog)),
-        supernaturalGlitch: 0.75,
+        horrorIntensity: Math.max(0.82, computeHorrorIntensity(state.currentLevelId, prog, state.narrative)),
+        supernaturalGlitch: 0.72,
         progressByLevel: {
           ...state.progressByLevel,
           [state.currentLevelId]: prog,
@@ -633,6 +930,13 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     if (puzzleId === level.tier3Puzzle.id) {
       prog.completed = true;
+      let nextNarrative = state.narrative;
+
+      // Unlock canonical Core Truth for Levels 1-4
+      if (level.tier3Puzzle.unlocksCoreTruthId) {
+        nextNarrative = unlockCoreTruth(nextNarrative, level.tier3Puzzle.unlocksCoreTruthId);
+      }
+
       const nextLevelId = state.currentLevelId + 1;
       const unlocked =
         nextLevelId <= LEVELS.length && !state.unlockedLevelIds.includes(nextLevelId)
@@ -644,8 +948,14 @@ export const useGameStore = create<GameState>((set, get) => ({
 
       const isFinalLevel = state.currentLevelId >= LEVELS.length;
 
+      if (isFinalLevel) {
+        const { nextState } = completeGameWithEnding(nextNarrative);
+        nextNarrative = nextState;
+      }
+
       set({
         unlockedLevelIds: unlocked,
+        narrative: nextNarrative,
         overlay: 'none',
         activePuzzleId: null,
         screen: isFinalLevel ? 'ending' : 'level_complete',
@@ -684,14 +994,13 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (!state.settings.enableJumpscares) return;
     if (state.screen !== 'playing' || state.overlay !== 'none') return;
     const now = Date.now();
-    // Respect 32s cooldown unless forced by major story trigger
-    if (!force && now - state.lastJumpscareAt < 32000) return;
+    if (!force && now - state.lastJumpscareAt < 34000) return;
 
     horrorAudio.playJumpscare(variant);
     set({
       activeJumpscare: { variant, caption, startedAt: now },
       lastJumpscareAt: now,
-      supernaturalGlitch: 1.0,
+      supernaturalGlitch: state.settings.reduceFlashing ? 0.35 : 0.95,
       activeWhisper: caption,
     });
 
@@ -734,7 +1043,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   updateSettings: (partial) => {
     const next = { ...get().settings, ...partial };
-    horrorAudio.setMasterVolume(next.masterVolume);
+    horrorAudio.applyVolumes(next.masterVolume, next.musicVolume, next.sfxVolume);
     set({ settings: next });
     get().saveToStorage();
   },

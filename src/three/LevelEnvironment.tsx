@@ -6,6 +6,7 @@ import { LevelData, PuzzleStation, WorldDoor, WorldLamp } from '../types/game';
 import { getWorldMaterial, createCalligraphyTexture } from './proceduralTextures';
 import { EvidenceModel } from './EvidenceModels';
 import { VietnameseLevelSetpieces } from './VietnameseProps';
+import { QUALITY_PROFILES } from './AssetPipeline';
 import { useGameStore } from '../store/gameStore';
 import { horrorAudio } from '../audio/horrorAudio';
 
@@ -432,8 +433,10 @@ const HorrorEntity: React.FC<{
 };
 
 export const LevelEnvironment: React.FC<LevelEnvironmentProps> = ({ level }) => {
-  const { camera } = useThree();
+  const { camera, gl, scene } = useThree();
   const progress = useGameStore((s) => s.progressByLevel[level.id]);
+  const narrative = useGameStore((s) => s.narrative);
+  const settings = useGameStore((s) => s.settings);
   const targeted = useGameStore((s) => s.targetedInteractable);
   const horrorIntensity = useGameStore((s) => s.horrorIntensity);
   const flashlightOn = useGameStore((s) => s.flashlightOn);
@@ -444,15 +447,51 @@ export const LevelEnvironment: React.FC<LevelEnvironmentProps> = ({ level }) => 
   const triggerJumpscare = useGameStore((s) => s.triggerJumpscare);
   const markZoneScareTriggered = useGameStore((s) => s.markZoneScareTriggered);
   const clearWhisper = useGameStore((s) => s.clearWhisper);
+  const setPerfStats = useGameStore((s) => s.setPerfStats);
 
   const eventTimerRef = useRef(11);
   const whisperClearRef = useRef(0);
+  const perfFramesRef = useRef(0);
+  const perfAccumRef = useRef(0);
   const camDir = useMemo(() => new THREE.Vector3(), []);
 
-  // Dynamic Horror & Jumpscare Event Director
+  const qualityProfile = QUALITY_PROFILES[settings.graphicsQuality];
+
+  // Dynamic Horror & Jumpscare Event Director + Real GPU Telemetry
   useFrame((_, rawDelta) => {
-    if (screen !== 'playing' || overlay !== 'none') return;
     const delta = Math.min(rawDelta, 0.05);
+
+    // Real measured FPS & scene geometry telemetry (sampled every 0.6s)
+    perfFramesRef.current += 1;
+    perfAccumRef.current += rawDelta;
+    if (perfAccumRef.current >= 0.6) {
+      const fps = Math.round(perfFramesRef.current / perfAccumRef.current);
+      const frameTimeMs = Number(((perfAccumRef.current / perfFramesRef.current) * 1000).toFixed(1));
+      // Count actual visible scene meshes & triangles (since EffectComposer resets gl.info.render to the final quad)
+      let meshCalls = 0;
+      let sceneTris = 0;
+      scene.traverse((obj) => {
+        const m = obj as THREE.Mesh;
+        if (!m.visible || !m.geometry) return;
+        const isInst = (m as THREE.InstancedMesh).isInstancedMesh;
+        const count = isInst ? (m as THREE.InstancedMesh).count : 1;
+        meshCalls += 1;
+        const index = m.geometry.index;
+        const posAttr = m.geometry.attributes?.position;
+        if (index) sceneTris += (index.count / 3) * count;
+        else if (posAttr) sceneTris += (posAttr.count / 3) * count;
+      });
+      setPerfStats({
+        fps,
+        frameTimeMs,
+        drawCalls: Math.max(gl.info.render.calls, meshCalls),
+        triangles: Math.max(gl.info.render.triangles, Math.round(sceneTris)),
+      });
+      perfFramesRef.current = 0;
+      perfAccumRef.current = 0;
+    }
+
+    if (screen !== 'playing' || overlay !== 'none') return;
 
     if (whisperClearRef.current > 0) {
       whisperClearRef.current -= delta;
@@ -466,49 +505,40 @@ export const LevelEnvironment: React.FC<LevelEnvironmentProps> = ({ level }) => 
     const pz = camera.position.z;
 
     if (level.id === 1) {
-      // Stepping near the stone well at night
       if (pz > 5.8 && Math.abs(px) < 2.6 && markZoneScareTriggered('l1_well_scare')) {
-        triggerJumpscare('blood_hands', '“CHA ƠI... KÉO CON LÊN VỚI!”', true);
+        triggerJumpscare('blood_hands', '“CON ƠI... ĐỪNG LẠI GẦN GIẾNG!”', true);
       }
-      // Stepping inside the newly unsealed East Room
       if (px > 4.2 && pz < 1.5 && markZoneScareTriggered('l1_sealed_scare')) {
-        triggerJumpscare('pale_bride', '“AI DÁM XÉ BÙA PHONG ẤN?!”', true);
+        triggerJumpscare('pale_bride', '“AI DÁM XÉ BÙA BUỒNG ĐÔNG 1988?!”', true);
       }
     } else if (level.id === 2) {
-      // Approaching ancient Banyan tree in bamboo forest
       if (px < -3.5 && pz > 0.8 && pz < 4.8 && markZoneScareTriggered('l2_banyan_scare')) {
         triggerJumpscare('pale_bride', '“ÁO ĐỎ ĐÂY RỒI... KIỆU HOA ĐÂU?!”', true);
       }
-      // Entering Inner Sanctuary (Hậu Cung)
       if (pz < -6.8 && markZoneScareTriggered('l2_inner_scare')) {
-        triggerJumpscare('pale_bride', '“TRẢ LẠI TÊN CHO TA!”', true);
+        triggerJumpscare('pale_bride', '“TRẢ LẠI TÊN CHO ĐÀO THỊ MÂY!”', true);
       }
     } else if (level.id === 3) {
-      // Approaching the cursed village well rim
       if (Math.hypot(px, pz) < 2.9 && markZoneScareTriggered('l3_well_scare')) {
-        triggerJumpscare('blood_hands', '“DƯỚI ĐÂY TỐI LẮM... ĐỪNG BỎ ĐI!”', true);
+        triggerJumpscare('blood_hands', '“18/08/1978... SAO CHỈ KÉO MỘT GIỎ LÊN?!”', true);
       }
-      // Stepping inside Headman's Hut (North)
       if (pz < -6.3 && Math.abs(px) < 3.5 && markZoneScareTriggered('l3_headman_scare')) {
-        triggerJumpscare('faceless_ferryman', '“NGƯƠI TÌM THẤY SỔ MẬT RỒI SAO?!”', true);
+        triggerJumpscare('faceless_ferryman', '“NGƯƠI BIẾT HUYẾT THỐNG CỦA MÌNH RỒI SAO?!”', true);
       }
     } else if (level.id === 4) {
-      // Getting close to any of the moving wooden guardian statues
       if (Math.abs(px) > 5.2 && pz < 5.5 && pz > -4.0 && markZoneScareTriggered('l4_statue_scare')) {
         triggerJumpscare('statue_face', '“ĐỪNG QUAY LƯNG LẠI VỚI CHÚNG TA!”', true);
       }
-      // Stepping into Inner Sanctum of the Communal House
       if (pz < -7.2 && markZoneScareTriggered('l4_sanctum_scare')) {
-        triggerJumpscare('statue_face', '“SẮC PHONG ĐÃ BỊ TRÁO!”', true);
+        triggerJumpscare('statue_face', '“SẮC PHONG 1958 ĐÃ BỊ TRÁO!”', true);
       }
     } else if (level.id === 5) {
-      // Stepping onto the moored Ferryboat deck!
       if (pz < -4.8 && markZoneScareTriggered('l5_boat_scare')) {
-        triggerJumpscare('faceless_ferryman', '“ĐÒ NHỔ SÀO RỒI... ĐỪNG HÒNG TRỐN!”', true);
+        triggerJumpscare('faceless_ferryman', '“ĐÒ NHỔ SÀO RỒI... HÃY PHÁN QUYẾT ĐI!”', true);
       }
     }
 
-    // 2. Periodic Dynamic Psychological Horror + High-Intensity Ambush Jumpscares
+    // 2. Periodic Dynamic Psychological Horror + Moral-Choice-Reactive Events
     eventTimerRef.current -= delta * (0.7 + horrorIntensity * 1.15);
     if (eventTimerRef.current <= 0) {
       eventTimerRef.current = 14 + Math.random() * 14;
@@ -520,16 +550,22 @@ export const LevelEnvironment: React.FC<LevelEnvironmentProps> = ({ level }) => 
         camera.position.z - camDir.z * 3.2,
       ];
 
+      const whisperPool = [
+        ...level.horrorWhispers,
+        ...(narrative.isNewGamePlus && level.ngPlusWhispers ? level.ngPlusWhispers : []),
+        ...(narrative.moralChoices.fate_dao_thi_may === 'keep'
+          ? ['“Ngươi giữ linh hồn ta lại... ngươi sẽ không bao giờ yên đâu...”']
+          : []),
+      ];
       const whisper =
-        level.horrorWhispers[Math.floor(Math.random() * level.horrorWhispers.length)] ??
+        whisperPool[Math.floor(Math.random() * whisperPool.length)] ??
         'Có ai đó đang đứng sau lưng bạn...';
 
-      if (roll < 0.22 && horrorIntensity >= 0.35) {
-        // Sudden supernatural jumpscare ambush tailored to current level!
+      const ambushChance = narrative.spiritScore < 0 ? 0.28 : 0.18;
+
+      if (roll < ambushChance && horrorIntensity >= 0.4) {
         const variantByLevel =
-          level.id === 1
-            ? 'pale_bride'
-            : level.id === 2
+          level.id === 1 || level.id === 2
             ? 'pale_bride'
             : level.id === 3
             ? 'blood_hands'
@@ -589,8 +625,8 @@ export const LevelEnvironment: React.FC<LevelEnvironmentProps> = ({ level }) => 
         position={[12, 22, 8]}
         intensity={0.52}
         color="#8aa8d1"
-        castShadow
-        shadow-mapSize={[1024, 1024]}
+        castShadow={qualityProfile.shadowsEnabled}
+        shadow-mapSize={[qualityProfile.shadowMapSize, qualityProfile.shadowMapSize]}
         shadow-bias={-0.0005}
       />
 
@@ -599,7 +635,7 @@ export const LevelEnvironment: React.FC<LevelEnvironmentProps> = ({ level }) => 
 
       {/* Atmospheric floating dust / incense ash / river mist particles */}
       <Sparkles
-        count={90}
+        count={qualityProfile.sparkleCount}
         scale={[26, 5, 26]}
         position={[0, 2.2, 0]}
         size={1.8}
@@ -681,15 +717,17 @@ export const LevelEnvironment: React.FC<LevelEnvironmentProps> = ({ level }) => 
         );
       })}
 
-      {/* Dynamic Psychological Horror Entities */}
-      {level.horrorAnchors.map((anchor) => (
-        <HorrorEntity
-          key={anchor.id}
-          anchor={anchor}
-          horrorIntensity={horrorIntensity}
-          flashlightOn={flashlightOn}
-        />
-      ))}
+      {/* Dynamic Psychological Horror Entities (including NG+ early Ferryman apparition!) */}
+      {level.horrorAnchors
+        .filter((anchor) => !anchor.ngPlusOnly || narrative.isNewGamePlus)
+        .map((anchor) => (
+          <HorrorEntity
+            key={anchor.id}
+            anchor={anchor}
+            horrorIntensity={horrorIntensity}
+            flashlightOn={flashlightOn}
+          />
+        ))}
     </>
   );
 };
