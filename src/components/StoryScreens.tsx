@@ -134,7 +134,14 @@ export const GrandEndingScreen: React.FC<{ level: LevelData }> = () => {
   const resolution = narrative.lastEnding ?? resolveEnding(narrative);
 
   const theme =
-    resolution.ending === 'true_ending'
+    resolution.ending === 'secret_ending'
+      ? {
+          bg: 'from-[#1c1026] via-[#120d17] to-[#060508]',
+          border: 'border-purple-400/85 shadow-[0_0_120px_rgba(192,132,252,0.34)]',
+          accent: 'text-purple-200',
+          Icon: Sparkles,
+        }
+      : resolution.ending === 'true_ending'
       ? {
           bg: 'from-[#1a1408] via-[#120e09] to-[#060505]',
           border: 'border-amber-600/80 shadow-[0_0_110px_rgba(217,119,6,0.28)]',
@@ -185,7 +192,7 @@ export const GrandEndingScreen: React.FC<{ level: LevelData }> = () => {
         </blockquote>
 
         {/* Canonical Ending Resolution Breakdown */}
-        <div className="grid grid-cols-3 gap-3 bg-[#18120e] border border-[#3d2a1b] rounded p-4 text-xs text-left">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#18120e] border border-[#3d2a1b] rounded p-4 text-xs text-left">
           <div>
             <span className="text-[#8f816c] block">Chân Lý Cốt Lõi</span>
             <strong className={resolution.hasAllCoreTruths ? 'text-emerald-300' : 'text-red-300'}>
@@ -193,19 +200,25 @@ export const GrandEndingScreen: React.FC<{ level: LevelData }> = () => {
             </strong>
           </div>
           <div>
-            <span className="text-[#8f816c] block">Điểm Chính Khí</span>
+            <span className="text-[#8f816c] block">Mật Vật Ẩn</span>
+            <strong className={resolution.hasAllSecretRelics ? 'text-purple-300' : 'text-stone-300'}>
+              {4 - resolution.missingSecretRelics.length} / 4
+            </strong>
+          </div>
+          <div>
+            <span className="text-[#8f816c] block">Điểm Lương Tâm</span>
             <strong className={resolution.spiritScore === 2 ? 'text-emerald-300' : 'text-red-300'}>
               {resolution.spiritScore >= 0 ? `+${resolution.spiritScore}` : resolution.spiritScore} / +2
             </strong>
           </div>
           <div>
-            <span className="text-[#8f816c] block">Phán Quyết Khải</span>
+            <span className="text-[#8f816c] block">Phán Quyết Cuối</span>
             <strong className="text-amber-200">
               {resolution.judgment === 'forgive'
                 ? 'Tha thứ'
                 : resolution.judgment === 'condemn'
-                ? 'Kết tội'
-                : 'Chưa phán quyết'}
+                ? 'Nghiêm khắc'
+                : 'Chưa tuyên'}
             </strong>
           </div>
         </div>
@@ -219,7 +232,7 @@ export const GrandEndingScreen: React.FC<{ level: LevelData }> = () => {
         <div className="flex items-center justify-center gap-2 text-xs text-amber-300/90">
           <ShieldCheck className="w-4 h-4" />
           <span>
-            Đã mở khóa <strong>NEW GAME+</strong> • Kết cục đã đạt: {narrative.completedEndings.length}/3
+            Đã mở khóa <strong>NEW GAME+</strong> • Kết cục đã đạt: {narrative.completedEndings.length}/4
           </span>
         </div>
 

@@ -14,10 +14,17 @@ import {
   Link2,
   ShieldCheck,
   Sparkles,
+  Map as MapIcon,
 } from 'lucide-react';
 import { LevelData } from '../types/game';
 import { useGameStore } from '../store/gameStore';
-import { CORE_TRUTH_CATALOG, CORE_TRUTH_IDS } from '../data/narrativePack';
+import {
+  CORE_TRUTH_CATALOG,
+  CORE_TRUTH_IDS,
+  SECRET_RELIC_CATALOG,
+  SECRET_RELIC_IDS,
+} from '../data/narrativePack';
+import { FieldMap } from './FieldMap';
 
 interface InvestigationJournalProps {
   level: LevelData;
@@ -114,6 +121,11 @@ export const InvestigationJournal: React.FC<InvestigationJournalProps> = ({ leve
       id: 'board' as const,
       label: `Bảng Kết Nối (${solvedConnIds.length}/${level.boardConnections.length})`,
       icon: Network,
+    },
+    {
+      id: 'map' as const,
+      label: 'Bản Đồ Hiện Trường',
+      icon: MapIcon,
     },
   ];
 
@@ -313,38 +325,68 @@ export const InvestigationJournal: React.FC<InvestigationJournalProps> = ({ leve
                     })}
                   </div>
 
+                  {/* Secret Relics Ledger */}
+                  <div className="pt-2 border-t border-[#3a281a] space-y-1.5">
+                    <div className="text-xs text-[#b5a78e]">
+                      Mật Vật Ẩn Mở Kết Cục Bí Mật ({narrative.secretRelics.length}/4):
+                    </div>
+                    {SECRET_RELIC_IDS.map((rid) => {
+                      const found = narrative.secretRelics.includes(rid);
+                      const rmeta = SECRET_RELIC_CATALOG[rid];
+                      return (
+                        <div
+                          key={rid}
+                          className={`p-2 rounded border text-[11px] flex items-center justify-between gap-2 ${
+                            found
+                              ? 'bg-purple-950/35 border-purple-700/60 text-purple-200'
+                              : 'bg-[#120e0b] border-[#2c2119] text-[#786b58]'
+                          }`}
+                        >
+                          <span>
+                            Màn {rmeta.levelId}: {found ? rmeta.title : 'Ẩn trong Mật Thất'}
+                          </span>
+                          {found ? (
+                            <Sparkles className="w-3.5 h-3.5 shrink-0 text-purple-300" />
+                          ) : (
+                            <Lock className="w-3 h-3 shrink-0" />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
                   {/* Moral Choices Ledger */}
                   <div className="pt-2 border-t border-[#3a281a] text-[11px] space-y-1.5 text-[#c7baa2]">
                     <div className="text-[#94856e] uppercase tracking-wider text-[10px]">
                       Lựa chọn đạo đức đã chốt
                     </div>
                     <div>
-                      • Đào Thị Mây (Án 02):{' '}
+                      • Lâm Hạ Vy (Hồ sơ 02):{' '}
                       <strong className="text-amber-200">
                         {narrative.moralChoices.fate_dao_thi_may === 'release'
-                          ? 'Giải thoát (+1)'
+                          ? 'An ủi & Giải thoát (+1)'
                           : narrative.moralChoices.fate_dao_thi_may === 'keep'
-                          ? 'Giữ lại (-1)'
+                          ? 'Giữ oán niệm (-1)'
                           : 'Chưa quyết định'}
                       </strong>
                     </div>
                     <div>
-                      • Hồ sơ Ngôi Đình (Án 04):{' '}
+                      • Đài Phát Sóng (Hồ sơ 04):{' '}
                       <strong className="text-amber-200">
                         {narrative.moralChoices.fate_village_truth === 'reveal'
-                          ? 'Công bố sự thật (+1)'
+                          ? 'Phát sóng sự thật (+1)'
                           : narrative.moralChoices.fate_village_truth === 'burn'
                           ? 'Thiêu hủy (-1)'
                           : 'Chưa quyết định'}
                       </strong>
                     </div>
                     <div>
-                      • Phán quyết Nguyễn Văn Khải (Án 05):{' '}
+                      • Ông Lâm Văn Khải (Hồ sơ 05):{' '}
                       <strong className="text-amber-200">
                         {narrative.moralChoices.judgment_nguyen_van_khai === 'forgive'
                           ? 'Tha thứ'
                           : narrative.moralChoices.judgment_nguyen_van_khai === 'condemn'
-                          ? 'Kết tội'
+                          ? 'Phán xét nghiêm khắc'
                           : 'Chưa tuyên án'}
                       </strong>
                     </div>
@@ -429,6 +471,11 @@ export const InvestigationJournal: React.FC<InvestigationJournalProps> = ({ leve
                             <span className="text-[10px] uppercase tracking-widest px-2 py-0.5 rounded bg-red-950/70 text-red-200 border border-red-800/50">
                               Tầng {clue.tier}
                             </span>
+                            {clue.isRedHerring && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-900/80 text-rose-100 border border-rose-500/60 font-semibold">
+                                NGỤY TẠO / NHIỄU
+                              </span>
+                            )}
                             {isUnread && (
                               <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-600 text-black font-bold flex items-center gap-0.5">
                                 <Sparkles className="w-2.5 h-2.5" /> MỚI
@@ -601,6 +648,9 @@ export const InvestigationJournal: React.FC<InvestigationJournalProps> = ({ leve
               )}
             </div>
           )}
+
+          {/* TAB 6: ARCHITECTURAL FIELD MAP */}
+          {journalTab === 'map' && <FieldMap level={level} />}
         </div>
       </div>
     </motion.div>

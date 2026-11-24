@@ -29,6 +29,7 @@ export const FirstPersonController: React.FC<FirstPersonControllerProps> = ({ le
   const horrorIntensity = useGameStore((s) => s.horrorIntensity);
   const supernaturalGlitch = useGameStore((s) => s.supernaturalGlitch);
   const activePhysicalJumpscare = useGameStore((s) => s.activePhysicalJumpscare);
+  const activeHidingSpotId = useGameStore((s) => s.activeHidingSpotId);
   const settings = useGameStore((s) => s.settings);
   const progress = useGameStore((s) => s.progressByLevel[level.id]);
 
@@ -38,6 +39,9 @@ export const FirstPersonController: React.FC<FirstPersonControllerProps> = ({ le
   const drainFlashlight = useGameStore((s) => s.drainFlashlight);
   const setCrouching = useGameStore((s) => s.setCrouching);
   const setSprinting = useGameStore((s) => s.setSprinting);
+  const toggleHidingSpot = useGameStore((s) => s.toggleHidingSpot);
+  const useIncenseWard = useGameStore((s) => s.useIncenseWard);
+  const toggleMinimap = useGameStore((s) => s.toggleMinimap);
   const setOverlay = useGameStore((s) => s.setOverlay);
   const openInspect = useGameStore((s) => s.openInspect);
   const interactDoor = useGameStore((s) => s.interactDoor);
@@ -146,7 +150,21 @@ export const FirstPersonController: React.FC<FirstPersonControllerProps> = ({ le
 
       if (e.code === 'KeyF') {
         toggleFlashlight();
+      } else if (e.code === 'KeyQ') {
+        useIncenseWard();
+      } else if (e.code === 'KeyM') {
+        toggleMinimap();
+        horrorAudio.playClick();
       } else if (e.code === 'KeyE') {
+        const hidingId = useGameStore.getState().activeHidingSpotId;
+        if (hidingId) {
+          const spot = level.hidingSpots?.find((h) => h.id === hidingId);
+          toggleHidingSpot(hidingId);
+          if (spot) {
+            camera.position.set(spot.exitPosition[0], STAND_HEIGHT, spot.exitPosition[2]);
+          }
+          return;
+        }
         const target = currentTargetRef.current;
         if (target) {
           if (target.kind === 'evidence') {
@@ -155,6 +173,13 @@ export const FirstPersonController: React.FC<FirstPersonControllerProps> = ({ le
             interactDoor(target.id);
           } else if (target.kind === 'puzzle') {
             openPuzzle(target.id);
+          } else if (target.kind === 'hiding_spot') {
+            const spot = level.hidingSpots?.find((h) => h.id === target.id);
+            if (spot) {
+              toggleHidingSpot(spot.id);
+              camera.position.set(spot.position[0], 1.38, spot.position[2]);
+              yaw.current = spot.rotationY ?? yaw.current;
+            }
           }
         }
       }
@@ -320,6 +345,25 @@ export const FirstPersonController: React.FC<FirstPersonControllerProps> = ({ le
     const isLocked = overlay === 'none';
 
     if (isLocked) {
+      if (activeHidingSpotId) {
+        const spot = level.hidingSpots?.find((h) => h.id === activeHidingSpotId);
+        if (spot) {
+          camera.position.set(spot.position[0], 1.38 + Math.sin(state.clock.elapsedTime * 1.1) * 0.004, spot.position[2]);
+          const exitTarget: TargetInteractable = {
+            kind: 'hiding_spot',
+            id: spot.id,
+            name: spot.name,
+            actionLabel: 'Bước ra khỏi chỗ ẩn nấp',
+            distance: 0.5,
+          };
+          if (currentTargetRef.current?.id !== exitTarget.id || currentTargetRef.current?.actionLabel !== exitTarget.actionLabel) {
+            currentTargetRef.current = exitTarget;
+            setTargetedInteractable(exitTarget);
+          }
+        }
+        return;
+      }
+
       const crouch = Boolean(keys.current['ControlLeft'] || keys.current['KeyC']);
       const sprint = Boolean(keys.current['ShiftLeft'] || keys.current['ShiftRight']) && !crouch;
       setCrouching(crouch);
@@ -378,9 +422,9 @@ export const FirstPersonController: React.FC<FirstPersonControllerProps> = ({ le
         [upVec.x, upVec.y, upVec.z]
       );
 
-      // Periodic transform save into store
+      // Periodic transform sync into store for smooth Minimap & throttled storage save
       saveTimer.current += delta;
-      if (saveTimer.current > 1.5) {
+      if (saveTimer.current > 0.35) {
         saveTimer.current = 0;
         updatePlayerTransform([camera.position.x, camera.position.y, camera.position.z], yaw.current);
       }
@@ -436,6 +480,19 @@ export const FirstPersonController: React.FC<FirstPersonControllerProps> = ({ le
       for (const station of level.puzzleStations) {
         if (station.requiresTier && currentTier < station.requiresTier) continue;
         evaluateCandidate('puzzle', station.puzzleId, station.name, station.promptLabel, station.position, 3.4);
+      }
+
+      if (level.hidingSpots) {
+        for (const spot of level.hidingSpots) {
+          evaluateCandidate(
+            'hiding_spot',
+            spot.id,
+            spot.name,
+            'Ẩn nấp & Nín thở',
+            [spot.position[0], 1.25, spot.position[2]],
+            3.3
+          );
+        }
       }
 
       const prev = currentTargetRef.current;

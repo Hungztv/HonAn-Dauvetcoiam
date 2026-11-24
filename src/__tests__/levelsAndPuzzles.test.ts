@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { LEVELS } from '../data/levels';
-import { CORE_TRUTH_IDS } from '../data/narrativePack';
+import { CORE_TRUTH_IDS, SECRET_RELIC_IDS } from '../data/narrativePack';
 import { LEVEL_VISUAL_PROFILES, VISUAL_STANDARD } from '../three/VisualStandard';
 import { QUALITY_PROFILES, assetPipeline } from '../three/AssetPipeline';
 
@@ -56,29 +56,47 @@ describe('All 5 Levels & 3-Tier Puzzle Integrity', () => {
     }
   });
 
-  it('enforces exact canonical puzzle solutions & Thuận Dương Phá Âm consistency across Levels 1–5', () => {
+  it('enforces 56x56m–64x64m expanded map bounds, hiding spots, red herrings, 4 secret relics & canonical puzzle solutions', () => {
     const [l1, l2, l3, l4, l5] = LEVELS;
 
-    // Level 1: Altar lock 1507 & unlocks truth_l1_sealed_room
+    for (const lvl of LEVELS) {
+      const spanX = lvl.bounds.maxX - lvl.bounds.minX;
+      const spanZ = lvl.bounds.maxZ - lvl.bounds.minZ;
+      expect(spanX).toBeGreaterThanOrEqual(56);
+      expect(spanZ).toBeGreaterThanOrEqual(56);
+      expect((lvl.mapZones ?? []).length).toBeGreaterThanOrEqual(5);
+      expect((lvl.hidingSpots ?? []).length).toBeGreaterThanOrEqual(2);
+      // Every level has at least 1 planted Red Herring to challenge player deduction
+      expect(lvl.evidences.some((e) => e.isRedHerring)).toBe(true);
+      expect(lvl.clues.some((c) => c.isRedHerring)).toBe(true);
+    }
+
+    // Levels 1–4 collectively unlock all 4 Secret Relics for the 4th Secret Ending
+    const foundRelics = LEVELS.flatMap((l) =>
+      l.evidences.map((e) => e.unlocksSecretRelicId).filter(Boolean)
+    );
+    expect(foundRelics).toEqual([...SECRET_RELIC_IDS]);
+
+    // Level 1: Room 404 breaker lock 4022 & unlocks truth_l1_sealed_room
     expect(l1.tier2Puzzle.kind).toBe('code_lock');
     if (l1.tier2Puzzle.kind === 'code_lock') {
-      expect(l1.tier2Puzzle.solution).toEqual(['1', '5', '0', '7']);
+      expect(l1.tier2Puzzle.solution).toEqual(['4', '0', '2', '2']);
     }
     expect(l1.tier3Puzzle.unlocksCoreTruthId).toBe(CORE_TRUTH_IDS[0]);
 
-    // Level 2: Sequence & Moral Choice #1 (Đào Thị Mây) & unlocks truth_l2_living_sacrifice
+    // Level 2: Radio Relay Sequence & Moral Choice #1 (Lâm Hạ Vy) & unlocks truth_l2_living_sacrifice
     expect(l2.tier2Puzzle.kind).toBe('sequence');
     expect(l2.tier3Puzzle.unlocksCoreTruthId).toBe(CORE_TRUTH_IDS[1]);
     expect(l2.tier3Puzzle.moralChoice?.choiceId).toBe('fate_dao_thi_may');
 
-    // Level 3: Well Winch 1978 & unlocks truth_l3_twin_bloodline
+    // Level 3: Sanatorium Cistern Valve 1998 & unlocks truth_l3_twin_bloodline
     expect(l3.tier2Puzzle.kind).toBe('code_lock');
     if (l3.tier2Puzzle.kind === 'code_lock') {
-      expect(l3.tier2Puzzle.solution).toEqual(['1', '9', '7', '8']);
+      expect(l3.tier2Puzzle.solution).toEqual(['1', '9', '9', '8']);
     }
     expect(l3.tier3Puzzle.unlocksCoreTruthId).toBe(CORE_TRUTH_IDS[2]);
 
-    // Level 4: Festival Drum Đông -> Nam -> Tây -> Bắc & Moral Choice #2 & unlocks truth_l4_forged_edict
+    // Level 4: Magnetic Drum Đông -> Nam -> Tây -> Bắc & Moral Choice #2 & unlocks truth_l4_forged_edict
     expect(l4.tier2Puzzle.kind).toBe('sequence');
     if (l4.tier2Puzzle.kind === 'sequence') {
       expect(l4.tier2Puzzle.solutionOrder).toEqual(['drum_dong', 'drum_nam', 'drum_tay', 'drum_bac']);
@@ -86,10 +104,10 @@ describe('All 5 Levels & 3-Tier Puzzle Integrity', () => {
     expect(l4.tier3Puzzle.unlocksCoreTruthId).toBe(CORE_TRUTH_IDS[3]);
     expect(l4.tier3Puzzle.moralChoice?.choiceId).toBe('fate_village_truth');
 
-    // Level 5: Ferryman Iron Chest Lược -> Trâm -> Xu -> Trống & Moral Choice #3 (Judgment)
+    // Level 5: Pontoon Lock Băng Đỏ -> Huy Hiệu -> Thẻ B3 -> Cuộn Phim & Moral Choice #3 (Judgment)
     expect(l5.tier2Puzzle.kind).toBe('code_lock');
     if (l5.tier2Puzzle.kind === 'code_lock') {
-      expect(l5.tier2Puzzle.solution).toEqual(['Lược', 'Trâm', 'Xu', 'Trống']);
+      expect(l5.tier2Puzzle.solution).toEqual(['Băng Đỏ', 'Huy Hiệu', 'Thẻ B3', 'Cuộn Phim']);
     }
     expect(l5.tier3Puzzle.moralChoice?.choiceId).toBe('judgment_nguyen_van_khai');
   });

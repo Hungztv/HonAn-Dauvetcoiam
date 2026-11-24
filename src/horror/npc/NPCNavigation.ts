@@ -4,63 +4,63 @@ import { distanceXZ } from './NPCStateMachine';
 import { hasUnobstructedLineOfSight } from './NPCPerception';
 
 /**
- * HỒN ÁN v5.0 – Lightweight Waypoint Stalking & Wall-Avoiding Navigation
- * Tailored to our 5 rural Vietnamese horror scenes:
- * - Zero heavy external navmesh dependency
- * - Guarantees NPCs NEVER clip through walls, closed doors, or player capsule
- * - Lets Đào Thị Mây & Trần Thị Liên relocate to unseen vantage points when player turns away!
+ * HỒN ÁN v6.0 – Large-Scale Waypoint Stalking & Wall-Avoiding Navigation (56x56m – 64x64m Maps)
+ * Covers corridors, courtyards, side wings, and flanking cover across all 5 2000s levels.
  */
 
 export const LEVEL_STALK_WAYPOINTS: Record<number, Vec3[]> = {
   1: [
-    [0.0, 0, -2.2], // Central hall aisle
-    [-5.2, 0, -1.5], // West bedroom doorway view
-    [-5.8, 0, 1.8], // West kitchen corner
-    [0.0, 0, 5.2], // Back doorway veranda
-    [-3.6, 0, 7.6], // Backyard left of well
-    [3.8, 0, 7.2], // Backyard right of well
-    [6.8, 0, -3.5], // Inside East Sealed Room
+    [-12.0, 0, 14.0], // Near bike shed
+    [10.0, 0, 14.5], // East courtyard before substation
+    [-14.5, 0, 1.5], // West Block A corridor
+    [0.0, 0, -1.5], // Central stairwell corridor
+    [15.0, 0, 1.5], // East Block A corridor
+    [-10.5, 0, -11.5], // Inside Room 402
+    [0.0, 0, -13.0], // North pass-through hall
+    [5.5, 0, -23.0], // North laundry yard
+    [15.0, 0, -12.0], // Inside Room 404
   ],
   2: [
-    [-5.0, 0, 7.6], // Bamboo forest South-West flank
-    [5.0, 0, 7.6], // Bamboo forest South-East flank
-    [-4.2, 0, 5.5], // Bamboo forest West path
-    [4.4, 0, 5.2], // Bamboo forest East path
-    [-3.6, 0, 0.4], // Near banyan tree
-    [3.8, 0, -0.2], // Right side before shrine
-    [0.0, 0, -3.1], // Shrine front hall
-    [-3.2, 0, -4.6], // Shrine side aisle
-    [3.2, 0, -4.6], // Shrine east alcove
-    [0.0, 0, -9.1], // Inner sanctuary (Hậu Cung)
+    [-9.5, 0, 20.0], // South-West yard flank
+    [9.5, 0, 20.0], // South-East yard flank
+    [-8.5, 0, 8.5], // Before Classroom 12A
+    [8.5, 0, 8.5], // Before Dormitory B12
+    [-17.5, 0, 0.0], // Inside Classroom 12A
+    [17.5, 0, 0.0], // Inside Dormitory B12
+    [-6.0, 0, -1.5], // Central walkway north
+    [6.0, 0, -1.5], // Central walkway east
+    [0.0, 0, -7.5], // Radio building lobby
+    [0.0, 0, -19.5], // Inside Radio Studio
   ],
   3: [
-    [-3.4, 0, 3.8],
-    [3.4, 0, 3.8],
-    [-3.2, 0, -3.2],
-    [3.2, 0, -3.2],
+    [-8.5, 0, 14.0],
+    [8.5, 0, 14.0],
+    [-8.5, 0, -6.5],
+    [8.5, 0, -6.5],
+    [-17.0, 0, 0.0],
+    [17.0, 0, 0.0],
   ],
   4: [
-    [-7.2, 0, 4.2],
-    [7.2, 0, 4.2],
-    [-7.2, 0, -2.5],
-    [7.2, 0, -2.5],
-    [-2.4, 0, 1.8],
-    [2.4, 0, 1.8],
-    [0.0, 0, -1.2],
+    [-10.0, 0, 16.0],
+    [10.0, 0, 16.0],
+    [-13.5, 0, 2.0],
+    [13.5, 0, 2.0],
+    [-13.5, 0, -9.5],
+    [13.5, 0, -9.5],
+    [0.0, 0, -2.0],
+    [22.0, 0, -2.0],
   ],
   5: [
-    [-4.2, 0, 6.2],
-    [4.2, 0, 6.2],
-    [0.0, 0, 1.4],
-    [0.0, 0, -2.2],
-    [0.0, 0, -6.5],
+    [-10.0, 0, 20.0],
+    [10.0, 0, 20.0],
+    [-14.0, 0, 13.0],
+    [14.0, 0, 13.0],
+    [0.0, 0, 3.5],
+    [0.0, 0, -6.0],
+    [0.0, 0, -16.0],
   ],
 };
 
-/**
- * Computes a wall-avoiding steering step toward targetPos.
- * Attempts direct heading first, then ±30° / ±60° steering deflections so NPCs slide smoothly around pillars/doors.
- */
 export function computeSafeStepToward(params: {
   level: LevelData;
   currentPos: Vec3;
@@ -109,10 +109,6 @@ export function computeSafeStepToward(params: {
   return { nextPos: currentPos, moved: false, yaw: baseYaw };
 }
 
-/**
- * Picks an unseen stalking waypoint (outside player's current FOV or occluded behind cover)
- * at an eerie mid-range distance (3.8m – 11m) so Đào Thị Mây / Trần Thị Liên relocate naturally!
- */
 export function pickUnseenStalkingWaypoint(params: {
   level: LevelData;
   currentPos: Vec3;
@@ -132,14 +128,13 @@ export function pickUnseenStalkingWaypoint(params: {
   for (const wp of waypoints) {
     const dPlayer = distanceXZ(wp, playerPos);
     const dSelf = distanceXZ(wp, currentPos);
-    if (dPlayer < 3.4 || dPlayer > 16.5 || dSelf < 2.0) continue;
+    if (dPlayer < 3.4 || dPlayer > 36.0 || dSelf < 2.0) continue;
     if (isPointBlockedInLevel(level, wp[0], wp[2], 0.4, openDoorIds)) continue;
 
-    // Must be either outside player's FOV OR occluded by a wall/door!
     const dx = (wp[0] - playerPos[0]) / dPlayer;
     const dz = (wp[2] - playerPos[2]) / dPlayer;
     const dot = dx * fx + dz * fz;
-    const isOutOfView = dot < 0.35;
+    const isOutOfView = dot < 0.38;
     const isOccluded = !hasUnobstructedLineOfSight(level, playerPos, wp, openDoorIds);
 
     if (isOutOfView || isOccluded) {

@@ -101,7 +101,7 @@ export function evaluateNPCPerception(params: {
 
   const inFOV = dot >= 0.56;
   const hasLineOfSight =
-    distance < 22 ? hasUnobstructedLineOfSight(level, playerPos, npcPos, openDoorIds) : false;
+    distance < 40 ? hasUnobstructedLineOfSight(level, playerPos, npcPos, openDoorIds) : false;
 
   // Flashlight cone is narrower (~dot >= 0.86) and reaches ~16m if unobstructed
   const isIlluminatedByFlashlight =

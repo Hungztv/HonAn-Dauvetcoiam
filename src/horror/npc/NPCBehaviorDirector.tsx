@@ -41,6 +41,8 @@ const WorldNPCActor: React.FC<{
   flashlightOn: boolean;
   isSprinting: boolean;
   isCrouching: boolean;
+  isPlayerHidden: boolean;
+  lastIncenseWardAt: number;
   isGameplayBlocked: boolean;
   openDoorIds: string[];
 }> = ({
@@ -52,6 +54,8 @@ const WorldNPCActor: React.FC<{
   flashlightOn,
   isSprinting,
   isCrouching,
+  isPlayerHidden,
+  lastIncenseWardAt,
   isGameplayBlocked,
   openDoorIds,
 }) => {
@@ -163,11 +167,11 @@ const WorldNPCActor: React.FC<{
     }
 
     const dist = distanceXZ(posRef.current, playerPos);
-    const far = dist > 26;
+    const far = dist > 48;
     if (far !== isCulled) setIsCulled(far);
 
-    // Distance-tiered AI perception tick throttling for high FPS stability
-    const tickInterval = dist < 10 ? 0.0 : dist < 20 ? 0.08 : 0.25;
+    // Distance-tiered AI perception tick throttling for high FPS stability across 64x64m maps
+    const tickInterval = dist < 14 ? 0.0 : dist < 28 ? 0.08 : 0.25;
     aiTickAccumRef.current += delta;
     const runPerceptionTick = aiTickAccumRef.current >= tickInterval;
     if (runPerceptionTick) aiTickAccumRef.current = 0;
@@ -237,8 +241,41 @@ const WorldNPCActor: React.FC<{
       return;
     }
 
-    const directlyWatched = perception.inFOV && perception.hasLineOfSight;
+    const directlyWatched = !isPlayerHidden && perception.inFOV && perception.hasLineOfSight;
     const angleToPlayer = perception.angleToPlayer;
+    const repelledByIncense =
+      blueprint.isHostile !== false &&
+      Date.now() - lastIncenseWardAt < 6000 &&
+      dist < 15.5;
+
+    if (repelledByIncense && !overrideClip) {
+      if (npcState !== 'Retreating') setNpcState('Retreating');
+      const backX = posRef.current[0] - Math.sin(angleToPlayer) * 2.2 * delta;
+      const backZ = posRef.current[2] - Math.cos(angleToPlayer) * 2.2 * delta;
+      if (!isPointBlockedInLevel(level, backX, backZ, 0.45, openDoorIds)) {
+        posRef.current = [backX, posRef.current[1], backZ];
+      }
+      opacityRef.current = Math.max(0, opacityRef.current - delta * 2.4);
+      setRenderOpacity(opacityRef.current);
+      if (opacityRef.current <= 0.06) {
+        playNPCDisappearAudio(posRef.current, blueprint.type);
+        vanishedCooldownRef.current = 14;
+        opacityRef.current = 1;
+        setRenderOpacity(1);
+        const nextCover = pickUnseenStalkingWaypoint({
+          level,
+          currentPos: posRef.current,
+          playerPos,
+          playerForward: playerFwd,
+          openDoorIds,
+        });
+        if (nextCover) posRef.current = nextCover;
+        setNpcState('Stalking');
+      }
+      groupRef.current.position.set(posRef.current[0], posRef.current[1], posRef.current[2]);
+      groupRef.current.rotation.y = rotYRef.current;
+      return;
+    }
 
     // Periodic subtle spatialized signature sound when nearby
     ambientAudioCooldownRef.current -= delta;
@@ -541,6 +578,8 @@ export const NPCBehaviorDirector: React.FC<{ level: LevelData }> = ({ level }) =
   const flashlightOn = useGameStore((s) => s.flashlightOn);
   const isSprinting = useGameStore((s) => s.isSprinting);
   const isCrouching = useGameStore((s) => s.isCrouching);
+  const activeHidingSpotId = useGameStore((s) => s.activeHidingSpotId);
+  const lastIncenseWardAt = useGameStore((s) => s.lastIncenseWardAt);
   const overlay = useGameStore((s) => s.overlay);
   const screen = useGameStore((s) => s.screen);
   const settings = useGameStore((s) => s.settings);
@@ -608,7 +647,9 @@ export const NPCBehaviorDirector: React.FC<{ level: LevelData }> = ({ level }) =
       return;
     }
 
-    // 2. Check level proximity trigger volumes (each fires once per run!)
+    // 2. Check level proximity trigger volumes (suppressed while player is safely hiding or burning Incense Ward!)
+    if (activeHidingSpotId || Date.now() - lastIncenseWardAt < 6000) return;
+
     for (const trig of LEVEL_JUMPSCARE_TRIGGERS) {
       if (trig.levelId !== level.id) continue;
       if (!trig.test(playerPos, narrative)) continue;
@@ -649,6 +690,8 @@ export const NPCBehaviorDirector: React.FC<{ level: LevelData }> = ({ level }) =
           flashlightOn={flashlightOn}
           isSprinting={isSprinting}
           isCrouching={isCrouching}
+          isPlayerHidden={Boolean(activeHidingSpotId)}
+          lastIncenseWardAt={lastIncenseWardAt}
           isGameplayBlocked={isGameplayBlocked}
           openDoorIds={openDoorIds}
         />

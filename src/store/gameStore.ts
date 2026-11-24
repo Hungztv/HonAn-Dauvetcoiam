@@ -21,14 +21,15 @@ import {
   sanitizeNarrativeState,
   startNewGamePlusRun,
   unlockCoreTruth,
+  unlockSecretRelic,
 } from '../data/narrativePack';
 import { horrorAudio } from '../audio/horrorAudio';
 import { NPCCharacterType } from '../horror/npc/NPCStateMachine';
 import { PhysicalJumpscareEvent, JumpscareType } from '../horror/jumpscare/PhysicalJumpscareDirector';
 import { NPCAnimationClipName } from '../horror/npc/NPCAnimationController';
 
-export const SAVE_KEY = 'hon_an_save_v1';
-export const SAVE_SCHEMA_VERSION = 4;
+export const SAVE_KEY = 'hon_an_save_v6';
+export const SAVE_SCHEMA_VERSION = 5;
 
 export interface SavedPayload {
   schemaVersion: number;
@@ -66,6 +67,7 @@ export const defaultSettings: GameSettings = {
   showHints: true,
   enableJumpscares: true,
   showPerfStats: false,
+  showMinimap: true,
 };
 
 function dedupeStrings(arr: unknown): string[] {
@@ -127,6 +129,7 @@ function sanitizeSettings(raw: unknown): GameSettings {
     showHints: typeof s.showHints === 'boolean' ? s.showHints : defaultSettings.showHints,
     enableJumpscares: typeof s.enableJumpscares === 'boolean' ? s.enableJumpscares : defaultSettings.enableJumpscares,
     showPerfStats: typeof s.showPerfStats === 'boolean' ? s.showPerfStats : defaultSettings.showPerfStats,
+    showMinimap: typeof s.showMinimap === 'boolean' ? s.showMinimap : defaultSettings.showMinimap,
   };
 }
 
@@ -256,7 +259,10 @@ interface GameState {
   isSprinting: boolean;
   inspectingEvidenceId: string | null;
   activePuzzleId: string | null;
-  journalTab: 'case' | 'evidence' | 'clues' | 'suspects' | 'board';
+  activeHidingSpotId: string | null;
+  incenseCharges: number;
+  lastIncenseWardAt: number;
+  journalTab: 'case' | 'evidence' | 'clues' | 'suspects' | 'board' | 'map';
   targetedInteractable: TargetInteractable | null;
   perfStats: PerfStats;
 
@@ -294,7 +300,7 @@ interface GameState {
   returnToMenu: () => void;
 
   setOverlay: (overlay: ActiveOverlay) => void;
-  setJournalTab: (tab: 'case' | 'evidence' | 'clues' | 'suspects' | 'board') => void;
+  setJournalTab: (tab: 'case' | 'evidence' | 'clues' | 'suspects' | 'board' | 'map') => void;
   setPointerLocked: (locked: boolean) => void;
   setTargetedInteractable: (target: TargetInteractable | null) => void;
   setPerfStats: (stats: PerfStats) => void;
@@ -303,6 +309,9 @@ interface GameState {
   drainFlashlight: (delta: number) => void;
   setCrouching: (v: boolean) => void;
   setSprinting: (v: boolean) => void;
+  toggleHidingSpot: (spotId: string) => void;
+  useIncenseWard: () => boolean;
+  toggleMinimap: () => void;
   updatePlayerTransform: (pos: Vec3, yaw: number) => void;
 
   // Investigation Actions
@@ -393,6 +402,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   isSprinting: false,
   inspectingEvidenceId: null,
   activePuzzleId: null,
+  activeHidingSpotId: null,
+  incenseCharges: 2,
+  lastIncenseWardAt: 0,
   journalTab: 'case',
   targetedInteractable: null,
   perfStats: { fps: 60, frameTimeMs: 16.6, drawCalls: 0, triangles: 0 },
@@ -458,6 +470,9 @@ export const useGameStore = create<GameState>((set, get) => ({
       flashlightBattery: 100,
       inspectingEvidenceId: null,
       activePuzzleId: null,
+      activeHidingSpotId: null,
+      incenseCharges: 2,
+      lastIncenseWardAt: 0,
       horrorIntensity: 0.15,
       extinguishedLampIds: [],
       activeWhisper: null,
@@ -486,6 +501,9 @@ export const useGameStore = create<GameState>((set, get) => ({
       flashlightBattery: 100,
       inspectingEvidenceId: null,
       activePuzzleId: null,
+      activeHidingSpotId: null,
+      incenseCharges: 3,
+      lastIncenseWardAt: 0,
       horrorIntensity: 0.24,
       extinguishedLampIds: [],
       activeWhisper: null,
@@ -540,6 +558,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       flashlightBattery: 100,
       inspectingEvidenceId: null,
       activePuzzleId: null,
+      activeHidingSpotId: null,
+      incenseCharges: 2,
       horrorIntensity: computeHorrorIntensity(levelId, prog, state.narrative),
       extinguishedLampIds: [],
       activeWhisper: null,
@@ -622,6 +642,62 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   setCrouching: (isCrouching) => set({ isCrouching }),
   setSprinting: (isSprinting) => set({ isSprinting }),
+
+  toggleHidingSpot: (spotId) => {
+    const state = get();
+    if (state.activeHidingSpotId === spotId) {
+      horrorAudio.playWoodCreak();
+      set({ activeHidingSpotId: null });
+      state.pushNotification('Rời khỏi chỗ nấp', 'Bạn đã bước ra ngoài — hãy quan sát kỹ xung quanh.', 'info');
+    } else {
+      horrorAudio.playWoodCreak();
+      set({
+        activeHidingSpotId: spotId,
+        flashlightOn: false,
+        isSprinting: false,
+        activePhysicalJumpscare: null,
+      });
+      state.pushNotification(
+        'Đang ẩn nấp & nín thở',
+        'Đèn pin đã tự tắt để tránh lộ vị trí. Nhấn [E] lần nữa để bước ra.',
+        'info'
+      );
+    }
+  },
+
+  useIncenseWard: () => {
+    const state = get();
+    if (state.screen !== 'playing' || state.overlay !== 'none') return false;
+    if (state.incenseCharges <= 0) {
+      state.pushNotification(
+        'Hết Nhang Trầm Hộ Mệnh',
+        'Hãy khám phá các Mật Thất Ẩn trên bản đồ để tìm thêm Nhang Trầm!',
+        'horror'
+      );
+      return false;
+    }
+    const now = Date.now();
+    if (now - state.lastIncenseWardAt < 4000) return false;
+
+    horrorAudio.playTempleBell();
+    set({
+      incenseCharges: state.incenseCharges - 1,
+      lastIncenseWardAt: now,
+      supernaturalGlitch: 0.15,
+      activeWhisper: 'Khói nhang trầm lan tỏa — các thực thể quanh bạn buộc phải lùi lại!',
+    });
+    state.pushNotification(
+      `Đã đốt Nhang Trầm Hộ Mệnh (Còn ${state.incenseCharges - 1})`,
+      'Xung trầm ấm đẩy lùi mọi bóng ma trong bán kính 15m suốt 6 giây!',
+      'tier'
+    );
+    return true;
+  },
+
+  toggleMinimap: () => {
+    const cur = get().settings;
+    get().updateSettings({ showMinimap: !cur.showMinimap });
+  },
 
   updatePlayerTransform: (pos, yaw) => {
     const state = get();
@@ -713,27 +789,50 @@ export const useGameStore = create<GameState>((set, get) => ({
     horrorAudio.playHotspotFound();
 
     const scareMap: Record<string, { npcType: NPCCharacterType; caption: string }> = {
-      l1_hs_comb_hair: { npcType: 'tran_thi_lien', caption: '“CON ƠI... ĐỪNG QUAY LẠI...”' },
-      l1_hs_photo_front: { npcType: 'tran_thi_lien', caption: '“SAO ÔNG LẠI NIÊM PHONG TÔI TRONG BUỒNG ĐÔNG?!”' },
-      l2_hs_doll_pin: { npcType: 'dao_thi_may', caption: '“ĐỪNG RÚT KIM RA...”' },
-      l3_hs_rope_cut: { npcType: 'child_spirit', caption: '“18/08/1978... SAO CHỈ KÉO MỘT GIỎ LÊN?!”' },
-      l4_hs_relief_front: { npcType: 'wooden_statue', caption: '“NHÌN RA SAU LƯNG NGƯƠI KIA...”' },
-      l5_hs_token_name: { npcType: 'faceless_passenger', caption: '“ĐẾN LƯỢT NGƯƠI PHÁN QUYẾT RỒI!”' },
+      l1_hs_comb_lime: { npcType: 'tran_thi_lien', caption: '“CỨU TÔI... CHÚNG XÂY TƯỜNG BÍT KÍN RỒI...”' },
+      l1_hs_photo_front: { npcType: 'tran_thi_lien', caption: '“ĐỪNG ĐỂ BỌN BÁCH BIẾT ANH GIỮ CUỘN BĂNG ĐỎ!”' },
+      l2_hs_doll_pin: { npcType: 'dao_thi_may', caption: '“ANH QUÂN ƠI... ĐỪNG QUÊN EM...”' },
+      l3_hs_rope_cut: { npcType: 'child_spirit', caption: '“ANH B3-09 ƠI... KÉO EM LÊN VỚI!”' },
+      l4_hs_relief_front: { npcType: 'wooden_statue', caption: '“ĐỪNG QUAY LƯNG TRONG RẠP CHIẾU BÓNG...”' },
+      l5_hs_token_name: { npcType: 'faceless_passenger', caption: '“ĐÃ ĐẾN GIỜ ĐỐI DIỆN SỰ THẬT RỒI!”' },
     };
     const queuedScare = scareMap[hotspotId];
     if (queuedScare) {
       state.queuePostInspectScare(queuedScare.npcType, queuedScare.caption);
     }
 
+    let nextNarrative = state.narrative;
+    let nextIncense = state.incenseCharges;
+    if (ev.unlocksSecretRelicId && !nextNarrative.secretRelics.includes(ev.unlocksSecretRelicId)) {
+      nextNarrative = unlockSecretRelic(nextNarrative, ev.unlocksSecretRelicId);
+      nextIncense += 1;
+      state.pushNotification(
+        `MỞ KHÓA MẬT VẬT ẨN (${nextNarrative.secretRelics.length}/4)`,
+        `${ev.name} — Cộng thêm +1 Nhang Trầm Hộ Mệnh [Q]!`,
+        'tier'
+      );
+    }
+
     if (hs.unlocksClueId && !prog.unlockedClueIds.includes(hs.unlocksClueId)) {
       prog.unlockedClueIds = [...prog.unlockedClueIds, hs.unlocksClueId];
       const clue = level?.clues.find((c) => c.id === hs.unlocksClueId);
       if (clue) {
-        state.pushNotification('Phát hiện chi tiết quan trọng', clue.title, 'clue');
+        state.pushNotification(
+          clue.isRedHerring ? 'Phát hiện chứng cứ ngụy tạo!' : 'Phát hiện chi tiết xác thực',
+          clue.title,
+          clue.isRedHerring ? 'horror' : 'clue'
+        );
       }
     }
 
-    if (prog.currentTier === 1 && level && prog.unlockedClueIds.length >= level.tier1RequiredClues) {
+    const authenticUnlockedCount = level
+      ? prog.unlockedClueIds.filter((cid) => {
+          const c = level.clues.find((item) => item.id === cid);
+          return c && !c.isRedHerring;
+        }).length
+      : prog.unlockedClueIds.length;
+
+    if (prog.currentTier === 1 && level && authenticUnlockedCount >= level.tier1RequiredClues) {
       prog.currentTier = 2;
       horrorAudio.playTierAdvance();
       state.pushNotification(
@@ -743,8 +842,10 @@ export const useGameStore = create<GameState>((set, get) => ({
       );
     }
 
-    const horrorIntensity = computeHorrorIntensity(state.currentLevelId, prog, state.narrative);
+    const horrorIntensity = computeHorrorIntensity(state.currentLevelId, prog, nextNarrative);
     set({
+      narrative: nextNarrative,
+      incenseCharges: nextIncense,
       horrorIntensity,
       progressByLevel: {
         ...state.progressByLevel,

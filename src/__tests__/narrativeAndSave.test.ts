@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   CORE_TRUTH_IDS,
+  SECRET_RELIC_IDS,
   CANONICAL_TIMELINE,
   NarrativeState,
   applyMoralChoice,
@@ -12,6 +13,7 @@ import {
   sanitizeNarrativeState,
   startNewGamePlusRun,
   unlockCoreTruth,
+  unlockSecretRelic,
 } from '../data/narrativePack';
 import { SAVE_SCHEMA_VERSION, migrateAndSanitizeSave } from '../store/gameStore';
 
@@ -23,14 +25,29 @@ function buildFullTruthsState(): NarrativeState {
   return state;
 }
 
-describe('Narrative Data Pack v3.1 — Ending Matrix & Core Rules', () => {
-  it('verifies canonical 1978/1998 timeline dates and Thuận Dương Phá Âm order', () => {
-    expect(CANONICAL_TIMELINE.twinBirthSolar).toBe('15/07/1978');
-    expect(CANONICAL_TIMELINE.sacrificeSolar).toBe('18/08/1978');
-    expect(CANONICAL_TIMELINE.daysBetweenBirthAndSacrifice).toBe(34);
-    expect(CANONICAL_TIMELINE.returnSolar).toBe('05/09/1998');
+describe('Narrative Data Pack v6.0 — 2000s Mystery Timeline & 4-Ending Matrix', () => {
+  it('verifies canonical 1994–2004 Đồi Sương Lâm Viên timeline and 4-item sequence', () => {
+    expect(CANONICAL_TIMELINE.mineCollapseYear).toBe(1994);
+    expect(CANONICAL_TIMELINE.wardExperimentDate).toBe('14/11/1998');
+    expect(CANONICAL_TIMELINE.sisterTragedyDate).toBe('14/11/2000');
+    expect(CANONICAL_TIMELINE.investigationNight).toBe('14/11/2004');
     expect(CANONICAL_TIMELINE.ritualOrderDirections).toEqual(['Đông', 'Nam', 'Tây', 'Bắc']);
-    expect(CANONICAL_TIMELINE.ritualOrderItems).toEqual(['Lược', 'Trâm', 'Xu', 'Trống']);
+    expect(CANONICAL_TIMELINE.ritualOrderItems).toEqual(['Băng Đỏ', 'Huy Hiệu', 'Thẻ B3', 'Cuộn Phim']);
+  });
+
+  it('unlocks the 4th SECRET ENDING when all 4 Core Truths + all 4 Secret Relics + Spirit +2 + forgive are met', () => {
+    let st = buildFullTruthsState();
+    for (const rid of SECRET_RELIC_IDS) {
+      st = unlockSecretRelic(st, rid);
+    }
+    st = applyMoralChoice(st, 'fate_dao_thi_may', 'release').nextState;
+    st = applyMoralChoice(st, 'fate_village_truth', 'reveal').nextState;
+    st = applyMoralChoice(st, 'judgment_nguyen_van_khai', 'forgive').nextState;
+
+    const res = resolveEnding(st);
+    expect(res.ending).toBe('secret_ending');
+    expect(res.hasAllSecretRelics).toBe(true);
+    expect(res.darkReason).toBeNull();
   });
 
   const endingMatrix: Array<{
@@ -189,7 +206,7 @@ describe('Save Migration, Corruption Recovery & New Game+ Lifecycle', () => {
     expect(migrated!.unlockedLevelIds).toEqual([1, 2]);
     expect(migrated!.progressByLevel[1].collectedEvidenceIds).toEqual(['l1_comb']);
     expect(migrated!.progressByLevel[1].unlockedClueIds).toEqual(['l1_c1']);
-    expect(migrated!.progressByLevel[1].playerPosition[0]).toBeLessThanOrEqual(10);
+    expect(migrated!.progressByLevel[1].playerPosition[0]).toBeLessThanOrEqual(27.6);
     expect(migrated!.narrative.coreTruths).toContain('truth_l1_sealed_room');
     expect(migrated!.settings.musicVolume).toBe(0.75); // filled default
   });

@@ -127,14 +127,14 @@ describe('HỒN ÁN v5.0 — 3D NPC System, Perception, Navigation, Animation & 
 
   it('never spawns 3D jumpscare NPCs inside walls or closed doors and plans valid 3D world positions', () => {
     const level1 = LEVELS[0];
-    // North outer wall at Z=-7 must be detected as blocked
-    expect(isPointBlockedInLevel(level1, 0, -7, 0.4, [])).toBe(true);
-    // Closed sealed East Room door at [3.2, 0.5] must be blocked when closed, open when in openDoorIds
-    expect(isPointBlockedInLevel(level1, 3.2, 0.5, 0.4, [])).toBe(true);
-    expect(isPointBlockedInLevel(level1, 3.2, 0.5, 0.4, ['door_l1_sealed'])).toBe(false);
+    // North outer perimeter wall at Z=-27.5 must be detected as blocked
+    expect(isPointBlockedInLevel(level1, 0, -27.5, 0.4, [])).toBe(true);
+    // Closed sealed Room 404 door at [10.1, -6.0] must be blocked when closed, open when in openDoorIds
+    expect(isPointBlockedInLevel(level1, 10.1, -6.0, 0.4, [])).toBe(true);
+    expect(isPointBlockedInLevel(level1, 10.1, -6.0, 0.4, ['door_l1_sealed'])).toBe(false);
 
-    // Safe physical jumpscare placement from Level 1 spawn
-    const safePos = findSafeNPCSpawnPosition(level1, [0, 1.65, 2.9], [0, 0, -1], 1.7, true, []);
+    // Safe physical jumpscare placement from Level 1 spawn [0, 1.65, 21.5]
+    const safePos = findSafeNPCSpawnPosition(level1, [0, 1.65, 21.5], [0, 0, -1], 1.7, true, []);
     expect(safePos).not.toBeNull();
     expect(isPointBlockedInLevel(level1, safePos![0], safePos![2], 0.35, [])).toBe(false);
 
@@ -142,7 +142,7 @@ describe('HỒN ÁN v5.0 — 3D NPC System, Perception, Navigation, Animation & 
       level: level1,
       npcType: 'tran_thi_lien',
       caption: 'Test 3D Scare',
-      playerPos: [0, 1.65, 2.9],
+      playerPos: [0, 1.65, 21.5],
       playerForward: [0, 0, -1],
       openDoorIds: [],
     });
@@ -189,19 +189,19 @@ describe('HỒN ÁN v5.0 — 3D NPC System, Perception, Navigation, Animation & 
 
   it('evaluates 3D NPC Perception (LOS wall/door occlusion, FOV, flashlight beam, player noise)', () => {
     const level1 = LEVELS[0];
-    // Player inside main hall [0, 1.65, 0.5] looking +X toward sealed East Room [5.2, 0, 0.5]
-    // Closed door at x=3.2 blocks LOS!
-    expect(hasUnobstructedLineOfSight(level1, [0, 1.65, 0.5], [5.2, 0, 0.5], [])).toBe(false);
-    // Opening the sealed door restores LOS!
+    // Player in Block A corridor [10.1, 1.65, -2.5] looking -Z toward sealed Room 404 [10.1, 0, -9.5]
+    // Closed steel door at [10.1, -6.0] blocks LOS!
+    expect(hasUnobstructedLineOfSight(level1, [10.1, 1.65, -2.5], [10.1, 0, -9.5], [])).toBe(false);
+    // Opening the sealed Room 404 door restores LOS!
     expect(
-      hasUnobstructedLineOfSight(level1, [0, 1.65, 0.5], [5.2, 0, 0.5], ['door_l1_sealed'])
+      hasUnobstructedLineOfSight(level1, [10.1, 1.65, -2.5], [10.1, 0, -9.5], ['door_l1_sealed'])
     ).toBe(true);
 
-    // Direct flashlight beam hits NPC in front with open LOS
+    // Direct flashlight beam hits NPC in front with open LOS in courtyard
     const lit = evaluateNPCPerception({
       level: level1,
-      npcPos: [0, 0, -1.5],
-      playerPos: [0, 1.65, 2.5],
+      npcPos: [0, 0, 15.0],
+      playerPos: [0, 1.65, 20.0],
       playerForward: [0, 0, -1],
       flashlightOn: true,
       isSprinting: true,
@@ -216,8 +216,8 @@ describe('HỒN ÁN v5.0 — 3D NPC System, Perception, Navigation, Animation & 
     // Flashlight off -> NOT illuminated
     const unlit = evaluateNPCPerception({
       level: level1,
-      npcPos: [0, 0, -1.5],
-      playerPos: [0, 1.65, 2.5],
+      npcPos: [0, 0, 15.0],
+      playerPos: [0, 1.65, 20.0],
       playerForward: [0, 0, -1],
       flashlightOn: false,
       isSprinting: false,

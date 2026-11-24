@@ -1,11 +1,13 @@
 /**
- * HỒN ÁN – DẤU VẾT CÕI ÂM
- * Narrative Design Bible v3.0 & Narrative Data Pack v3.1
- * Single canonical source of truth for timeline, Core Truths, Moral Choices,
- * Spirit Score ("Chính Khí"), Ending Resolution, and New Game+ secrets.
+ * HỒN ÁN – DẤU VẾT CÕI ÂM (v6.0)
+ * KỊCH BẢN MỚI: HỒ SƠ ĐỒI SƯƠNG LÂM VIÊN (VIỆT NAM THẬP NIÊN 2000 • 1994–2004)
+ * Single canonical source of truth for timeline, 4 Core Truths, 4 Secret Relics,
+ * Moral Choices, Spirit Score ("Lương Tâm / Chính Khí"), 4 Endings (incl. Secret Ending), and NG+.
  */
 
-export const NARRATIVE_VERSION = '3.1' as const;
+import { SecretRelicId } from '../types/game';
+
+export const NARRATIVE_VERSION = '6.0' as const;
 
 export const CORE_TRUTH_IDS = [
   'truth_l1_sealed_room',
@@ -16,12 +18,19 @@ export const CORE_TRUTH_IDS = [
 
 export type CoreTruthId = (typeof CORE_TRUTH_IDS)[number];
 
+export const SECRET_RELIC_IDS: readonly SecretRelicId[] = [
+  'relic_l1_cassette',
+  'relic_l2_badge',
+  'relic_l3_wristband',
+  'relic_l4_film_reel',
+] as const;
+
 export interface CoreTruthMeta {
   id: CoreTruthId;
   levelId: 1 | 2 | 3 | 4;
   year: number;
   direction: 'Đông' | 'Nam' | 'Tây' | 'Bắc';
-  ritualItem: 'Lược gỗ' | 'Trâm ngọc' | 'Đồng xu sứt' | 'Dùi trống';
+  ritualItem: 'Băng Đỏ' | 'Huy Hiệu' | 'Thẻ B3' | 'Cuộn Phim';
   title: string;
   summary: string;
 }
@@ -30,55 +39,88 @@ export const CORE_TRUTH_CATALOG: Record<CoreTruthId, CoreTruthMeta> = {
   truth_l1_sealed_room: {
     id: 'truth_l1_sealed_room',
     levelId: 1,
-    year: 1988,
+    year: 2002,
     direction: 'Đông',
-    ritualItem: 'Lược gỗ',
-    title: 'Căn Buồng Niêm Phong Năm 1988',
+    ritualItem: 'Băng Đỏ',
+    title: 'Bức Tường Giả Phòng 404 Khu Tập Thể K7 (2002)',
     summary:
-      'Năm 1988, Nguyễn Văn Khải phong ấn Trần Thị Liên — mẹ ruột của cặp song sinh — trong gian buồng phía Đông sau cơn loạn trí đau đớn và lời nguyền từ chiếc giếng năm 1978.',
+      'Y tá trưởng Nguyễn Thu Hà không hề bỏ trốn vì cờ bạc như biên bản giả năm 2002. Sau khi giấu Cuộn băng Cassette nhãn Đỏ tố cáo đường dây đưa học sinh nội trú đi thử thuốc, bà đã bị nhốt sau vách tường xây bít của Phòng 404.',
   },
   truth_l2_living_sacrifice: {
     id: 'truth_l2_living_sacrifice',
     levelId: 2,
-    year: 1968,
+    year: 2000,
     direction: 'Nam',
-    ritualItem: 'Trâm ngọc',
-    title: 'Nghi Lễ Hiến Sinh Sống Năm 1968',
+    ritualItem: 'Huy Hiệu',
+    title: 'Đêm Mất Điện 14/11/2000 Tại Trường Nội Trú Đồi Sương',
     summary:
-      'Đào Thị Mây không tự vẫn mà bị thầy cúng Năm Đen và Lý trưởng biến thành vật hiến sinh sống ngay đêm trước lễ cưới, rồi lập miếu dọa dân làng che giấu tội ác.',
+      'Em gái bạn — nữ sinh Lâm Hạ Vy — không tự sát vì trượt đội tuyển. Thư tuyệt mệnh đánh máy là ngụy tạo; đêm 14/11/2000 Vy lẻn vào Phòng Phát Thanh định phát băng vạch trần Hiệu phó Bảo và Viện trưởng Bách, nhưng bị khóa trái cửa sân thượng rồi bị đẩy ngã và mang đi phi tang lúc vẫn còn thở.',
   },
   truth_l3_twin_bloodline: {
     id: 'truth_l3_twin_bloodline',
     levelId: 3,
-    year: 1978,
+    year: 1998,
     direction: 'Tây',
-    ritualItem: 'Đồng xu sứt',
-    title: 'Huyết Thống Cặp Song Sinh Năm 1978',
+    ritualItem: 'Thẻ B3',
+    title: 'Dự Án Sóng Hạ Âm Khu B3 & Ký Ức Bị Xóa Của Chính Bạn (1998)',
     summary:
-      'Sinh ngày 15/07/1978 dương lịch; 34 ngày sau, đúng Rằm tháng Bảy âm lịch (18/08/1978), một đứa trẻ song sinh bị hiến tế xuống giếng. Nguyễn Văn Khải đã đánh đổi tất cả để cứu đứa còn lại — chính là bạn — đưa đi nơi khác nuôi lớn.',
+      'Từ năm 1998, Viện Điều Dưỡng Rừng Thông đã thử nghiệm sóng hạ âm 19Hz kèm thuốc xóa ký ức chấn thương khiến Bệnh nhi số 07 (Bé Minh) tử vong dưới bể ngầm. Chính bạn — Lâm Hoàng Quân (Bệnh nhân B3-09) — cũng từng bị tiêm xóa ký ức khiến đêm 14/11/2000 lên cơn hoảng loạn vô thức chốt cửa sân thượng nhốt Hạ Vy ở lại.',
   },
   truth_l4_forged_edict: {
     id: 'truth_l4_forged_edict',
     levelId: 4,
-    year: 1958,
+    year: 1994,
     direction: 'Bắc',
-    ritualItem: 'Dùi trống',
-    title: 'Sắc Phong Giả & Nỗi Oan Ông Từ Năm 1958',
+    ritualItem: 'Cuộn Phim',
+    title: 'Đài Phát Hạ Âm Mỏ Cũ & Cái Chết Kỹ Sư Hòa Năm 1994',
     summary:
-      'Từ năm 1958, sắc phong Thành Hoàng đã bị tráo giả, Ông Từ giữ đình bị thủ tiêu, dùi trống bị yểm cất trong kho tế khí cho đến khi Khải lén lấy năm 1988 và giấu sau mảnh phù điêu suốt 10 năm chờ người phá giải.',
+      'Mọi thứ khởi phát năm 1994 tại Nhà Văn Hóa & Đài Phát Sóng Đồi Bắc: để che giấu vụ sập hầm khai thác lậu dưới chân đập thủy điện, nhóm lợi ích đã sát hại Kỹ sư trưởng Ông Hòa, dùng máy phát hạ âm biến nơi đây thành vùng "ma ám" cấm người dân bén mảng suốt 10 năm.',
+  },
+};
+
+export interface SecretRelicMeta {
+  id: SecretRelicId;
+  levelId: 1 | 2 | 3 | 4;
+  title: string;
+  summary: string;
+}
+
+export const SECRET_RELIC_CATALOG: Record<SecretRelicId, SecretRelicMeta> = {
+  relic_l1_cassette: {
+    id: 'relic_l1_cassette',
+    levelId: 1,
+    title: 'Máy Nghe Băng Walkman Cũ (Mật Thất Hầm Điện K7)',
+    summary: 'Lưu đoạn băng nháp giọng Hạ Vy nhờ y tá Thu Hà giữ kín chuyện anh trai Quân từng bị tiêm thuốc ở Khu B3.',
+  },
+  relic_l2_badge: {
+    id: 'relic_l2_badge',
+    levelId: 2,
+    title: 'Cuộn Băng Mặt B Của Hạ Vy (Hầm Sân Khấu Hội Trường)',
+    summary: 'Lời nhắn cuối cùng của Hạ Vy gửi anh trai: "Em biết anh bị thuốc làm mờ trí nhớ nên mới khóa cửa vì tưởng đang cứu em — đừng bao giờ tự trách mình, anh nhé".',
+  },
+  relic_l3_wristband: {
+    id: 'relic_l3_wristband',
+    levelId: 3,
+    title: 'Phim X-Quang & Phác Đồ Giải Độc B3-09 (Phòng Rửa Phim Ẩn)',
+    summary: 'Bằng chứng gốc có chữ ký sống của Bác sĩ Vũ Đình Bách ra lệnh xóa ký ức của Quân năm 1998.',
+  },
+  relic_l4_film_reel: {
+    id: 'relic_l4_film_reel',
+    levelId: 4,
+    title: 'Bản Âm Bản Phim Nhựa 35mm Năm 1994 (Buồng Tối Tráng Phim)',
+    summary: 'Ghi hình toàn bộ mặt thật nhóm quan chức và Viện trưởng Bách tại hiện trường sập hầm 1994.',
   },
 };
 
 export const CANONICAL_TIMELINE = {
-  twinBirthSolar: '15/07/1978',
-  sacrificeLunar: 'Rằm tháng Bảy Âm lịch 1978',
-  sacrificeSolar: '18/08/1978',
-  daysBetweenBirthAndSacrifice: 34,
-  returnLunar: 'Rằm tháng Bảy Âm lịch 1998',
-  returnSolar: '05/09/1998',
-  protagonistAgeAtReturn: 20,
+  mineCollapseYear: 1994,
+  wardExperimentDate: '14/11/1998',
+  sisterTragedyDate: '14/11/2000',
+  nurseDisappearanceYear: 2002,
+  investigationNight: '14/11/2004',
+  protagonistAgeAtReturn: 26,
   ritualOrderDirections: ['Đông', 'Nam', 'Tây', 'Bắc'] as const,
-  ritualOrderItems: ['Lược', 'Trâm', 'Xu', 'Trống'] as const,
+  ritualOrderItems: ['Băng Đỏ', 'Huy Hiệu', 'Thẻ B3', 'Cuộn Phim'] as const,
 } as const;
 
 export type MoralChoiceId =
@@ -104,7 +146,11 @@ export const VALID_MORAL_VALUES: {
   judgment_nguyen_van_khai: ['forgive', 'condemn'],
 };
 
-export type EndingType = 'true_ending' | 'bittersweet_ending' | 'dark_ending';
+export type EndingType =
+  | 'secret_ending'
+  | 'true_ending'
+  | 'bittersweet_ending'
+  | 'dark_ending';
 
 export type DarkEndingReason =
   | 'incomplete_truth'
@@ -116,7 +162,9 @@ export interface EndingResolution {
   ending: EndingType;
   spiritScore: number;
   hasAllCoreTruths: boolean;
+  hasAllSecretRelics: boolean;
   missingCoreTruths: CoreTruthId[];
+  missingSecretRelics: SecretRelicId[];
   judgment: MoralChoiceValueMap['judgment_nguyen_van_khai'] | null;
   darkReason: DarkEndingReason | null;
   title: string;
@@ -127,6 +175,7 @@ export interface EndingResolution {
 
 export interface NarrativeState {
   coreTruths: CoreTruthId[];
+  secretRelics: SecretRelicId[];
   moralChoices: MoralChoiceRecord;
   /** Recomputed strictly from valid moralChoices */
   spiritScore: number;
@@ -140,6 +189,7 @@ export interface NarrativeState {
 export function createInitialNarrativeState(preserveMeta?: Partial<NarrativeState>): NarrativeState {
   return {
     coreTruths: [],
+    secretRelics: [],
     moralChoices: {},
     spiritScore: 0,
     isNewGamePlus: false,
@@ -153,10 +203,10 @@ export function createInitialNarrativeState(preserveMeta?: Partial<NarrativeStat
 }
 
 /**
- * Computes Chính Khí (Spirit Score) strictly from validated moral choices.
- * - fate_dao_thi_may: release (+1) | keep (-1)
- * - fate_village_truth: reveal (+1) | burn (-1)
- * - judgment_nguyen_van_khai: forgive (0) | condemn (0)
+ * Computes Lương Tâm / Chính Khí (Spirit Score) strictly from validated moral choices:
+ * - fate_dao_thi_may (Lâm Hạ Vy): release (+1) | keep (-1)
+ * - fate_village_truth (Hồ sơ Đài Phát Sóng): reveal (+1) | burn (-1)
+ * - judgment_nguyen_van_khai (Ông Lâm Văn Khải): forgive (0) | condemn (0)
  */
 export function computeSpiritScore(choices: MoralChoiceRecord): number {
   let score = 0;
@@ -169,10 +219,6 @@ export function computeSpiritScore(choices: MoralChoiceRecord): number {
   return score;
 }
 
-/**
- * Locks a moral choice permanently for the current run.
- * If the choice has already been made, returns state unchanged (cannot overwrite).
- */
 export function applyMoralChoice<K extends MoralChoiceId>(
   state: NarrativeState,
   choiceId: K,
@@ -201,7 +247,6 @@ export function applyMoralChoice<K extends MoralChoiceId>(
   };
 }
 
-/** Unlocks a canonical Core Truth ID cleanly without duplicates. */
 export function unlockCoreTruth(state: NarrativeState, truthId: CoreTruthId): NarrativeState {
   if (!CORE_TRUTH_IDS.includes(truthId)) return state;
   if (state.coreTruths.includes(truthId)) return state;
@@ -211,13 +256,15 @@ export function unlockCoreTruth(state: NarrativeState, truthId: CoreTruthId): Na
   };
 }
 
-/**
- * Sanitizes untrusted/corrupted/legacy NarrativeState from localStorage:
- * - Strips invalid & duplicate CoreTruth IDs
- * - Strips invalid MoralChoice keys/values
- * - Recomputes spiritScore from valid moralChoices (ignores forged/stale spiritScore!)
- * - Normalizes completedEndings & NG+ flags
- */
+export function unlockSecretRelic(state: NarrativeState, relicId: SecretRelicId): NarrativeState {
+  if (!SECRET_RELIC_IDS.includes(relicId)) return state;
+  if (state.secretRelics.includes(relicId)) return state;
+  return {
+    ...state,
+    secretRelics: [...state.secretRelics, relicId],
+  };
+}
+
 export function sanitizeNarrativeState(raw: unknown): NarrativeState {
   if (!raw || typeof raw !== 'object') {
     return createInitialNarrativeState();
@@ -233,6 +280,18 @@ export function sanitizeNarrativeState(raw: unknown): NarrativeState {
       !coreTruths.includes(item as CoreTruthId)
     ) {
       coreTruths.push(item as CoreTruthId);
+    }
+  }
+
+  const rawRelics = Array.isArray(obj.secretRelics) ? obj.secretRelics : [];
+  const secretRelics: SecretRelicId[] = [];
+  for (const item of rawRelics) {
+    if (
+      typeof item === 'string' &&
+      (SECRET_RELIC_IDS as readonly string[]).includes(item) &&
+      !secretRelics.includes(item as SecretRelicId)
+    ) {
+      secretRelics.push(item as SecretRelicId);
     }
   }
 
@@ -255,11 +314,20 @@ export function sanitizeNarrativeState(raw: unknown): NarrativeState {
     moralChoices.judgment_nguyen_van_khai = judgeVal;
   }
 
-  const validEndings: EndingType[] = ['true_ending', 'bittersweet_ending', 'dark_ending'];
+  const validEndings: EndingType[] = [
+    'secret_ending',
+    'true_ending',
+    'bittersweet_ending',
+    'dark_ending',
+  ];
   const rawEndings = Array.isArray(obj.completedEndings) ? obj.completedEndings : [];
   const completedEndings: EndingType[] = [];
   for (const e of rawEndings) {
-    if (typeof e === 'string' && validEndings.includes(e as EndingType) && !completedEndings.includes(e as EndingType)) {
+    if (
+      typeof e === 'string' &&
+      validEndings.includes(e as EndingType) &&
+      !completedEndings.includes(e as EndingType)
+    ) {
       completedEndings.push(e as EndingType);
     }
   }
@@ -273,6 +341,7 @@ export function sanitizeNarrativeState(raw: unknown): NarrativeState {
 
   return {
     coreTruths,
+    secretRelics,
     moralChoices,
     spiritScore: computeSpiritScore(moralChoices),
     isNewGamePlus,
@@ -285,31 +354,55 @@ export function sanitizeNarrativeState(raw: unknown): NarrativeState {
 
 /**
  * Resolves the canonical ending strictly from sanitized state:
- * - True Ending: spiritScore === 2 && all 4 Core Truths && judgment === 'forgive'
- * - Bittersweet Ending: spiritScore === 2 && all 4 Core Truths && judgment === 'condemn'
+ * - Secret Ending (4th Ending): all 4 Core Truths && all 4 Secret Relics && spiritScore === 2 && judgment === 'forgive'
+ * - True Ending: all 4 Core Truths && spiritScore === 2 && judgment === 'forgive'
+ * - Bittersweet Ending: all 4 Core Truths && spiritScore === 2 && judgment === 'condemn'
  * - Dark Ending: otherwise, classified with exact darkReason
  */
 export function resolveEnding(inputState: NarrativeState): EndingResolution {
   const state = sanitizeNarrativeState(inputState);
   const spiritScore = state.spiritScore;
   const missingCoreTruths = CORE_TRUTH_IDS.filter((id) => !state.coreTruths.includes(id));
+  const missingSecretRelics = SECRET_RELIC_IDS.filter((id) => !state.secretRelics.includes(id));
   const hasAllCoreTruths = missingCoreTruths.length === 0;
+  const hasAllSecretRelics = missingSecretRelics.length === 0;
   const judgment = state.moralChoices.judgment_nguyen_van_khai ?? null;
+
+  if (hasAllCoreTruths && hasAllSecretRelics && spiritScore === 2 && judgment === 'forgive') {
+    return {
+      ending: 'secret_ending',
+      spiritScore,
+      hasAllCoreTruths,
+      hasAllSecretRelics,
+      missingCoreTruths,
+      missingSecretRelics,
+      judgment,
+      darkReason: null,
+      title: 'KẾT CỤC BÍ MẬT — BẢN THU ÂM MẶT B LÚC BÌNH MINH',
+      subtitle: 'Đủ 4 Mật Vật Ẩn • 4 Chân Lý • Lương Tâm Trọn Vẹn • Sự Tha Thứ Của Hạ Vy',
+      narrative:
+        'Khi đặt chiếc Walkman cũ lên cabin phà và lật sang Mặt B cuộn băng giấu dưới hầm hội trường, giọng nói trong trẻo của Lâm Hạ Vy vang lên giữa tiếng sóng vỗ rạng sáng 15/11/2004: "Anh Quân ơi, nếu anh nghe được mặt băng này nghĩa là anh đã nhớ lại tất cả. Em biết đêm đó anh lên cơn hoảng loạn vì thuốc của Khu B3 nên mới khóa cửa sân thượng để chắn bọn họ cho em. Em chưa bao giờ giận anh hay giận bố!". Trên sóng FM toàn tỉnh, toàn bộ phim nhựa 1994, bệnh án 1998 và băng ghi âm 2000–2002 đồng loạt được phát đi. Bốn bóng người lặng lẽ tan thành sương trắng ấm áp dưới nắng sớm Đồi Lâm Viên.',
+      epilogue:
+        'Đoàn xe thanh tra đặc biệt kéo còi vang vọng triền đèo lúc 6 giờ sáng. Trên bến phà lộng gió, ông Lâm Văn Khải cởi chiếc áo mưa sờn rách khoác lên vai con trai — mười năm bóng tối chính thức khép lại trọn vẹn không còn một mảnh khuất tất nào.',
+    };
+  }
 
   if (hasAllCoreTruths && spiritScore === 2 && judgment === 'forgive') {
     return {
       ending: 'true_ending',
       spiritScore,
       hasAllCoreTruths,
+      hasAllSecretRelics,
       missingCoreTruths,
+      missingSecretRelics,
       judgment,
       darkReason: null,
-      title: 'KẾT CỤC THẬT — BÌNH MINH TRÊN BẾN ĐÒ ÂM',
-      subtitle: 'Thuận Dương Phá Âm • Chính Khí Viên Mãn • Tha Thứ',
+      title: 'KẾT CỤC THẬT — ÁNH ĐÈN BÊN KIA BỜ ĐẬP',
+      subtitle: 'Sự Thật Phơi Bày • Lương Tâm Vững Vàng • Hóa Giải Mặc Cảm',
       narrative:
-        'Bốn tín vật Đông – Nam – Tây – Bắc (Lược – Trâm – Xu – Trống) đồng loạt tỏa sáng vàng ấm áp. Sương mù trên khúc sông làng Đông Mộ tan biến trước ánh nắng rạng đông 05/09/1998. Bốn oan hồn — Trần Thị Liên, Đào Thị Mây, người em song sinh yểu mệnh và Ông Từ giữ đình — khẽ cúi đầu siêu thoát. Nguyễn Văn Khải buông mái chèo cũ, rơi nước mắt thanh thản khi nghe chính đứa con năm xưa mình cứu sống gọi một tiếng "Cha".',
+        'Bốn vật chứng Băng Đỏ – Huy Hiệu – Thẻ B3 – Cuộn Phim khớp nối hoàn chỉnh toàn bộ hồ sơ tội ác từ 1994 đến 2002. Tín hiệu hạ âm trên đỉnh đồi chấm dứt, trả lại sự tĩnh lặng cho mặt hồ Lâm Viên. Linh hồn Hạ Vy, y tá Thu Hà, bé Minh và kỹ sư Hòa khẽ mỉm cười trước khi tan vào làn sương bạc đầu ngày. Ông Lâm Văn Khải buông dây neo phà, nghẹn ngào nắm lấy bàn tay run rẩy của đứa con trai đã 4 năm mang gánh nặng ký ức khuyết thiếu.',
       epilogue:
-        'Lời nguyền 40 năm từ 1958 đến 1998 chính thức khép lại. Trên bến sông vắng chỉ còn tiếng nước chảy êm đềm và chiếc đèn pin cũ khắc dòng chữ của người cha.',
+        'Vụ án Đồi Sương Lâm Viên được mở lại trên mặt báo sáng hôm sau. (Gợi ý: Vẫn còn 4 Mật Vật Ẩn trong các mật thất có thể mở khóa Kết Cục Bí Mật thứ 4!).',
     };
   }
 
@@ -318,19 +411,20 @@ export function resolveEnding(inputState: NarrativeState): EndingResolution {
       ending: 'bittersweet_ending',
       spiritScore,
       hasAllCoreTruths,
+      hasAllSecretRelics,
       missingCoreTruths,
+      missingSecretRelics,
       judgment,
       darkReason: null,
-      title: 'KẾT CỤC NGẬM NGÙI — ĐÒ RỜI BẾN VẮNG',
-      subtitle: 'Sự Thật Sáng Tỏ • Chính Khí Trọn Vẹn • Phán Xét Nghiêm Khắc',
+      title: 'KẾT CỤC NGẬM NGÙI — TIẾNG CÒI PHÀ TRONG MƯA LẠNH',
+      subtitle: 'Công Lý Nghiêm Khắc • Không Lời Bào Chữa',
       narrative:
-        'Mọi uẩn khúc suốt 40 năm đã được phơi bày trước ánh sáng công lý. Đào Thị Mây, Trần Thị Liên, đứa trẻ song sinh và Ông Từ đều được hóa giải oan khuất, nhẹ nhàng sang bờ bên kia. Thế nhưng trước lời kết tội lạnh lùng của bạn, Nguyễn Văn Khải không biện minh một lời — ông lặng lẽ đội lại chiếc nón lá rách, một mình chèo con đò trống chìm dần vào làn sương trắng để tự gánh phần nghiệp cuối cùng.',
+        'Toàn bộ hồ sơ đen của Viện trưởng Bách và Hiệu phó Bảo đã được gửi thẳng tới cơ quan điều tra tỉnh, trả lại danh dự cho bốn nạn nhân. Thế nhưng trước lời phán xét nghiêm khắc về bốn năm che giấu sự thật làm giả hiện trường, ông Lâm Văn Khải chỉ lặng lẽ gật đầu chấp nhận. Ông tự tay khóa cabin, ngồi đợi đoàn xe công an đến bên cầu phao dưới cơn mưa lạnh buốt tháng Mười Một.',
       epilogue:
-        'Án oan đã giải, nhưng sự tha thứ chưa từng được nói ra. Bình minh lên trên bến vắng mang theo nỗi buồn day dứt không thể gọi tên.',
+        'Án oan đã được rửa sạch trên giấy trắng mực đen, nhưng khoảng lặng giữa hai cha con bên hồ thủy điện mãi mãi không bao giờ hàn gắn được.',
     };
   }
 
-  // Classify Dark Ending failure reasons accurately
   const reasons: ('incomplete_truth' | 'compromised_conscience' | 'judgment_missing')[] = [];
   if (!hasAllCoreTruths) reasons.push('incomplete_truth');
   if (spiritScore < 2) reasons.push('compromised_conscience');
@@ -341,30 +435,31 @@ export function resolveEnding(inputState: NarrativeState): EndingResolution {
 
   const reasonLine =
     darkReason === 'incomplete_truth'
-      ? 'Những mảnh ghép cốt lõi của 4 vụ án vẫn còn bỏ sót — oan hồn chưa thể gọi đủ tên để siêu thoát.'
+      ? 'Hồ sơ điều tra vẫn khuyết những mắt xích cốt lõi — biên bản ngụy tạo của Viện trưởng Bách dễ dàng bẻ gãy lời tố cáo của bạn.'
       : darkReason === 'compromised_conscience'
-      ? 'Lương tâm đã bị lung lay bởi những lựa chọn vị kỷ — Chính Khí không đủ để phá vỡ tà trận.'
+      ? 'Những thỏa hiệp tiêu hủy bằng chứng và níu giữ oán niệm đã làm vẩn đục lương tâm người cầm bút.'
       : darkReason === 'judgment_missing'
-      ? 'Lời phán quyết cuối cùng chưa được tuyên — con đò mãi kẹt giữa ranh giới âm dương.'
-      : 'Vừa thiếu chân lý cốt lõi vừa đánh mất Chính Khí — bóng tối cõi âm lập tức nuốt trọn bến đò.';
+      ? 'Sự do dự không dám đối diện trách nhiệm cuối cùng khiến chuyến phà kẹt lại giữa màn sương đặc quánh.'
+      : 'Vừa bỏ sót chân tướng cốt lõi vừa đánh mất lương tâm nghề nghiệp — màn đêm Đồi Lâm Viên lập tức nuốt chửng sự thật.';
 
   return {
     ending: 'dark_ending',
     spiritScore,
     hasAllCoreTruths,
+    hasAllSecretRelics,
     missingCoreTruths,
+    missingSecretRelics,
     judgment,
     darkReason,
-    title: 'KẾT CỤC BÓNG TỐI — CHUYẾN ĐÒ KHÔNG BẾN',
-    subtitle: 'Âm Khí Phản Phệ • Vòng Lặp Lời Nguyền Tiếp Diễn',
+    title: 'KẾT CỤC BÓNG TỐI — TẦN SỐ VĨNH CỬU 404Hz',
+    subtitle: 'Sóng Hạ Âm Phản Phệ • Vòng Lặp Đêm 14/11',
     narrative:
-      `Nghi thức Thuận Dương Phá Âm gãy đoạn giữa chừng. ${reasonLine} Bốn ngọn đèn lồng trên đò phụt tắt trong làn gió lạnh cắt da. Tiếng trống đình và tiếng gõ đáy giếng đồng loạt vang lên từ bốn phương, còn chiếc nón lá rách rơi xuống ngay trước chân bạn — buộc bạn ở lại làm người lái đò mới cho đến đêm Rằm tháng Bảy tiếp theo.`,
+      `Cuộc đối chất trên chuyến phà sụp đổ. ${reasonLine} Tiếng ù hạ âm 19Hz từ đỉnh đồi bất ngờ dội vang làm toàn bộ đèn cao áp trên đập thủy điện nổ tung. Giọng băng cassette rè đặc lặp đi lặp lại trong đầu bạn, và khi mở mắt ra, đồng hồ điện tử trên cổ tay lại nhảy lùi về đúng 23:45 đêm 14/11/2004...`,
     epilogue:
-      'Bóng tối vẫn chưa buông tha làng Đông Mộ. Hãy quay lại điều tra đủ 4 Chân Lý Cốt Lõi và giữ vững Chính Khí (+2) để thay đổi định mệnh.',
+      'Sự thật vẫn chìm dưới đáy hồ Lâm Viên. Hãy thu thập đủ 4 Chân Lý Cốt Lõi, phân biệt rõ manh mối giả và giữ vững Lương Tâm (+2) để phá vỡ vòng lặp.',
   };
 }
 
-/** Completes the game run, resolves ending, records it, and unlocks New Game+. */
 export function completeGameWithEnding(state: NarrativeState): {
   nextState: NarrativeState;
   resolution: EndingResolution;
@@ -386,12 +481,6 @@ export function completeGameWithEnding(state: NarrativeState): {
   };
 }
 
-/**
- * Starts a clean New Game+ run:
- * - Resets coreTruths, moralChoices, spiritScore, lastEnding for the new run
- * - Preserves ngPlusUnlocked & completedEndings
- * - Enables isNewGamePlus = true and increments ngPlusRunCount
- */
 export function startNewGamePlusRun(state: NarrativeState): NarrativeState {
   const sanitized = sanitizeNarrativeState(state);
   if (!sanitized.ngPlusUnlocked) {
@@ -399,6 +488,7 @@ export function startNewGamePlusRun(state: NarrativeState): NarrativeState {
   }
   return {
     coreTruths: [],
+    secretRelics: [],
     moralChoices: {},
     spiritScore: 0,
     isNewGamePlus: true,
@@ -409,7 +499,6 @@ export function startNewGamePlusRun(state: NarrativeState): NarrativeState {
   };
 }
 
-/** Hidden NG+ & moral-choice-reactive evidence notes shown when inspecting items or opening Journal */
 export interface ActiveEvidenceNote {
   id: string;
   tag: 'NG+' | 'Chính Khí' | 'Cốt Truyện';
@@ -421,28 +510,28 @@ const NG_PLUS_NOTES_BY_EVIDENCE: Record<string, ActiveEvidenceNote[]> = {
     {
       id: 'ngp_flashlight_note',
       tag: 'NG+',
-      text: 'Khi rọi kỹ ánh đèn pin vào thành bát hương, bạn chợt nhận ra trên thân đèn pin của mình có dòng chữ khắc mờ của Nguyễn Văn Khải: "Con phải sống qua tuổi 20 — đừng quay về trước Rằm tháng Bảy 1998".',
+      text: 'Rọi sát đèn vào đáy bát hương bàn thờ cầu thang K7, bạn nhận ra mặt trong nắp pin đèn pin của mình có dán tem kiểm định của "Trạm Thủy Điện Lâm Viên — L.V.Khải 2000".',
     },
   ],
   l1_ritual_paper: [
     {
       id: 'ngp_red_petition',
       tag: 'NG+',
-      text: 'Kẹp sau tờ sớ cúng xuất hiện thêm một lá đơn đỏ gấp nhỏ: "Đứa trẻ sinh ngày 15/07/1978 đã sống trọn tuổi 20 — đêm 05/09/1998 này là cơ hội duy nhất để hóa giải án oan".',
+      text: 'Mặt sau tờ biên bản công an có dấu bút chì mờ của ông Khải: "Giấy đòi nợ ở phòng 402 là giả — đừng tin lời gã bảo vệ trực đêm".',
     },
   ],
   l4_mallet: [
     {
       id: 'ngp_mallet_10y',
       tag: 'NG+',
-      text: 'Ghi chú ẩn khắc mặt trong cán dùi trống: "Năm 1988, ta lén lấy dùi trống từ kho tế khí trước khi chúng đốt, giấu sau mảnh phù điêu suốt 10 năm trời chờ con tìm thấy".',
+      text: 'Khắc bên trong hộp sắt cuộn phim: "Bố đã lén tráo cuộn phim gốc năm 2001 trước khi đám người của Bách đốt kho Nhà Văn Hóa".',
     },
   ],
   l5_letter: [
     {
       id: 'ngp_khai_dialogue',
       tag: 'NG+',
-      text: 'Dòng tái bút mới của Nguyễn Văn Khải ở Màn 5: "Cha đã đứng đợi trên bến đò từ khi con còn đặt chân vào nhà gỗ ba gian. Tha thứ hay phán xét — cha đều chấp nhận".',
+      text: 'Dòng tái bút mới của ông Lâm Văn Khải ở Màn 5: "Hãy tìm đủ cả 4 Mật Vật Ẩn ở các hầm ngầm nếu con muốn nghe trọn vẹn mặt B cuộn băng của bé Hạ Vy".',
     },
   ],
 };
@@ -457,33 +546,32 @@ export function getActiveEvidenceNotes(
     notes.push(...NG_PLUS_NOTES_BY_EVIDENCE[evidenceId]);
   }
 
-  // Moral choice reactivity notes
   if (evidenceId === 'l3_register' && narrative.moralChoices.fate_dao_thi_may === 'release') {
     notes.push({
       id: 'mc_may_blessing',
       tag: 'Chính Khí',
-      text: 'Hơi ấm thoang thoảng mùi hương sen từ Miếu Cô Đỏ làm rõ thêm nét mực bị xóa trên giấy khai sinh ngày 15/07/1978.',
+      text: 'Nhờ bạn đã thanh thản trao trả kỷ vật cho Hạ Vy ở Trường Nội Trú, kẹp giữa trang bệnh án B3-09 hiện rõ tờ ghi chú giúp bạn phân biệt ngay hồ sơ thật và hồ sơ bị sửa.',
     });
   }
   if (evidenceId === 'l3_register' && narrative.moralChoices.fate_dao_thi_may === 'keep') {
     notes.push({
       id: 'mc_may_curse',
       tag: 'Chính Khí',
-      text: 'Vệt mực đỏ sẫm như máu rỉ ra che mờ lề trang sổ — oan khí của Đào Thị Mây đang bám theo bạn tới tận Làng Giếng Cũ.',
+      text: 'Vệt nước mưa đen ngòm nhỏ xuống nhòe một góc bệnh án B3-09 — nỗi uất ức của Hạ Vy đang bám theo bước chân bạn khắp hành lang Viện Điều Dưỡng.',
     });
   }
   if (evidenceId === 'l5_ledger' && narrative.moralChoices.fate_village_truth === 'reveal') {
     notes.push({
       id: 'mc_truth_light',
       tag: 'Chính Khí',
-      text: 'Nhờ bạn đã công bố sự thật tại Ngôi Đình Cổ, bốn dòng tên trên sổ lái đò sáng rõ mạch lạc, sẵn sàng cho nghi thức Thuận Dương Phá Âm.',
+      text: 'Tín hiệu phát thanh công bố sự thật từ Đồi Bắc giúp bốn dải tần trên Sổ Trực Phà ổn định rõ nét.',
     });
   }
   if (evidenceId === 'l5_ledger' && narrative.moralChoices.fate_village_truth === 'burn') {
     notes.push({
       id: 'mc_truth_ash',
       tag: 'Chính Khí',
-      text: 'Mép sổ lái đò cháy sém đen ngòm như vừa bị lửa thiêu từ Ngôi Đình Cổ — tà khí đang cản trở chuyến đò siêu thoát.',
+      text: 'Mùi khét lẹt của cuộn hồ sơ bị đốt ở Đài Phát Sóng ám chặt lên Sổ Trực Phà — sóng hạ âm đang nhiễu loạn dữ dội quanh cabin.',
     });
   }
 

@@ -17,6 +17,8 @@ const IMPORTANCE_LABELS = {
   then_chot: { text: 'Vật chứng then chốt', cls: 'bg-red-950/90 text-red-200 border-red-700/60' },
   quan_trong: { text: 'Quan trọng', cls: 'bg-amber-950/80 text-amber-200 border-amber-700/50' },
   bo_tro: { text: 'Bổ trợ', cls: 'bg-stone-900/90 text-stone-300 border-stone-600/50' },
+  nhieu_gia: { text: 'Nghi vấn / Ngụy tạo', cls: 'bg-rose-950/90 text-rose-200 border-rose-500/70' },
+  mat_vat: { text: 'Mật vật ẩn (Kết cục Bí mật)', cls: 'bg-purple-950/90 text-purple-200 border-purple-500/70' },
 };
 
 /** Angle & Zoom-aware 3D hotspot marker so back/bottom details reward genuine 360° rotation */

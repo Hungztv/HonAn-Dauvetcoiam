@@ -239,32 +239,32 @@ export function getLevelNPCBlueprints(
   const mayReleased = narrative.moralChoices.fate_dao_thi_may === 'release';
 
   const all: NPCSpawnBlueprint[] = [
-    // LEVEL 1 — Trần Thị Liên + NG+ Early Ferryman
+    // LEVEL 1 — Y tá Nguyễn Thu Hà (56x56m Khu Tập Thể K7) + NG+ Ông Lâm Văn Khải
     {
       id: 'npc_l1_lien_curtain',
       type: 'tran_thi_lien',
       levelId: 1,
-      position: [7.4, 0.0, -5.2],
+      position: [17.5, 0.0, -14.2],
       rotationY: -0.6,
       initialState: 'Observing',
-      minHorror: 0.15,
+      minHorror: 0.12,
       isHostile: true,
     },
     {
       id: 'npc_l1_lien_hall',
       type: 'tran_thi_lien',
       levelId: 1,
-      position: [-2.1, 0.0, 8.2],
+      position: [-10.5, 0.0, 1.5],
       rotationY: 0.5,
-      initialState: 'Hidden',
-      minHorror: 0.3,
+      initialState: 'Stalking',
+      minHorror: 0.22,
       isHostile: true,
     },
     {
       id: 'npc_l1_ngp_ferryman',
       type: 'ferryman',
       levelId: 1,
-      position: [4.4, 0.0, 8.4],
+      position: [9.5, 0.0, 22.0],
       rotationY: -2.4,
       initialState: 'Observing',
       minHorror: 0.0,
@@ -272,29 +272,29 @@ export function getLevelNPCBlueprints(
       ngPlusOnly: true,
     },
 
-    // LEVEL 2 — Đào Thị Mây (Forest stalker + Hậu Cung sanctuary)
+    // LEVEL 2 — Nữ sinh Lâm Hạ Vy (60x60m Trường Nội Trú Đồi Sương)
     {
       id: 'npc_l2_may_forest',
       type: 'dao_thi_may',
       levelId: 2,
-      position: [5.4, 0.0, 3.2],
-      rotationY: -1.1,
+      position: [6.5, 0.0, 12.0],
+      rotationY: -0.8,
       initialState: 'Observing',
-      minHorror: 0.12,
+      minHorror: 0.1,
       isHostile: !mayReleased,
     },
     {
       id: 'npc_l2_may_sanctuary',
       type: 'dao_thi_may',
       levelId: 2,
-      position: [0.0, 0.08, -9.2],
+      position: [0.0, 0.06, -21.5],
       rotationY: 0,
       initialState: 'Observing',
       minHorror: 0.1,
       isHostile: !mayReleased,
     },
 
-    // LEVEL 3 — Hồn Đứa Trẻ Dưới Giếng (1978)
+    // LEVEL 3 — Bệnh nhi số 07 Bé Minh (62x62m Bể Nước Ngầm Viện B3)
     {
       id: 'npc_l3_child_well',
       type: 'child_spirit',
@@ -306,12 +306,12 @@ export function getLevelNPCBlueprints(
       isHostile: true,
     },
 
-    // LEVEL 4 — Bốn Tượng Quan Gỗ Đình Làng (Independent Weeping-Angel AI) + Optional May ambush if 'keep'
+    // LEVEL 4 — 4 Hình Nhân Rạp Chiếu Bóng (60x60m Nhà Văn Hóa) + Optional Hạ Vy ambush if 'keep'
     {
       id: 'npc_l4_statue_0',
       type: 'wooden_statue',
       levelId: 4,
-      position: [-7.5, 0, 4.2],
+      position: [-12.5, 0, 7.5],
       rotationY: Math.PI / 2,
       initialState: 'Observing',
       minHorror: 0.0,
@@ -322,7 +322,7 @@ export function getLevelNPCBlueprints(
       id: 'npc_l4_statue_1',
       type: 'wooden_statue',
       levelId: 4,
-      position: [7.5, 0, 4.2],
+      position: [12.5, 0, 7.5],
       rotationY: -Math.PI / 2,
       initialState: 'Observing',
       minHorror: 0.0,
@@ -333,7 +333,7 @@ export function getLevelNPCBlueprints(
       id: 'npc_l4_statue_2',
       type: 'wooden_statue',
       levelId: 4,
-      position: [-7.5, 0, -2.5],
+      position: [-12.5, 0, -8.5],
       rotationY: Math.PI / 2,
       initialState: 'Observing',
       minHorror: 0.0,
@@ -344,7 +344,7 @@ export function getLevelNPCBlueprints(
       id: 'npc_l4_statue_3',
       type: 'wooden_statue',
       levelId: 4,
-      position: [7.5, 0, -2.5],
+      position: [12.5, 0, -8.5],
       rotationY: -Math.PI / 2,
       initialState: 'Observing',
       minHorror: 0.0,
@@ -355,7 +355,7 @@ export function getLevelNPCBlueprints(
       id: 'npc_l4_may_ambush',
       type: 'dao_thi_may',
       levelId: 4,
-      position: [2.8, 0, -8.8],
+      position: [4.5, 0, -21.0],
       rotationY: -0.4,
       initialState: 'Hidden',
       minHorror: 0.25,
@@ -363,56 +363,56 @@ export function getLevelNPCBlueprints(
       requiresMoralChoice: { choiceId: 'fate_dao_thi_may', value: 'keep' },
     },
 
-    // LEVEL 5 — 4 Hành Khách Không Mặt + Người Lái Đò (Nguyễn Văn Khải) + Optional May ambush if 'keep'
+    // LEVEL 5 — 4 Bóng Người Trên Phà Đêm + Ông Lâm Văn Khải (64x64m Bến Phà Thủy Điện)
     {
       id: 'npc_l5_pass_0',
       type: 'faceless_passenger',
       levelId: 5,
-      position: [-1.85, 0.14, -5.8],
+      position: [-3.2, 0.16, -15.5],
       rotationY: 0.45,
       initialState: 'Idle',
       minHorror: 0.0,
-      variantIndex: 0, // 1988 Liên
+      variantIndex: 0,
       isHostile: false,
     },
     {
       id: 'npc_l5_pass_1',
       type: 'faceless_passenger',
       levelId: 5,
-      position: [1.85, 0.14, -6.1],
+      position: [3.2, 0.16, -15.8],
       rotationY: -0.45,
       initialState: 'Idle',
       minHorror: 0.0,
-      variantIndex: 1, // 1968 Mây
+      variantIndex: 1,
       isHostile: false,
     },
     {
       id: 'npc_l5_pass_2',
       type: 'faceless_passenger',
       levelId: 5,
-      position: [-1.75, 0.14, -8.9],
+      position: [-3.1, 0.16, -21.5],
       rotationY: 0.35,
       initialState: 'Idle',
       minHorror: 0.0,
-      variantIndex: 2, // 1978 Song sinh
+      variantIndex: 2,
       isHostile: false,
     },
     {
       id: 'npc_l5_pass_3',
       type: 'faceless_passenger',
       levelId: 5,
-      position: [1.75, 0.14, -8.9],
+      position: [3.1, 0.16, -21.5],
       rotationY: -0.35,
       initialState: 'Idle',
       minHorror: 0.0,
-      variantIndex: 3, // 1958 Ông Từ
+      variantIndex: 3,
       isHostile: false,
     },
     {
       id: 'npc_l5_ferryman',
       type: 'ferryman',
       levelId: 5,
-      position: [1.35, 0.14, -10.3],
+      position: [2.2, 0.16, -24.5],
       rotationY: -0.35,
       initialState: 'Idle',
       minHorror: 0.0,
@@ -424,7 +424,7 @@ export function getLevelNPCBlueprints(
             id: 'npc_l5_may_ambush',
             type: 'dao_thi_may' as const,
             levelId: 5,
-            position: [-3.8, 0, 5.4] as Vec3,
+            position: [-8.5, 0, 18.0] as Vec3,
             rotationY: 0.9,
             initialState: 'Stalking' as const,
             minHorror: 0.2,

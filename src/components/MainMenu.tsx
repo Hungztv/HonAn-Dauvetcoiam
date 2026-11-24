@@ -142,14 +142,14 @@ export const MainMenu: React.FC = () => {
       {/* Main Menu Navigation Column */}
       <div className="relative z-10 h-full flex flex-col justify-between p-8 md:p-14 max-w-xl">
         <div className="space-y-2">
-          <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.32em] text-red-400/90 border-b border-red-900/60 pb-1.5">
-            <span>Trinh Thám Kinh Dị Dân Gian Việt Nam</span>
+          <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.28em] text-red-400/90 border-b border-red-900/60 pb-1.5">
+            <span>Điều Tra Tâm Linh Việt Nam Thập Niên 2000</span>
           </div>
           <h1 className="font-display-vn text-5xl md:text-7xl font-bold tracking-wider text-[#f2e8d2] drop-shadow-[0_4px_24px_rgba(127,29,29,0.65)] flicker-subtle">
             HỒN ÁN
           </h1>
           <p className="font-serif-vn text-xl md:text-2xl italic text-red-300/90 tracking-widest">
-            DẤU VẾT CÕI ÂM
+            HỒ SƠ ĐỒI SƯƠNG LÂM VIÊN
           </p>
         </div>
 
@@ -193,7 +193,7 @@ export const MainMenu: React.FC = () => {
             >
               <span className="flex items-center gap-3 font-semibold tracking-wider uppercase text-sm">
                 <RotateCcw className="w-4 h-4 text-amber-300" />
-                New Game+ ({narrative.completedEndings.length}/3 kết cục)
+                New Game+ ({narrative.completedEndings.length}/4 kết cục)
               </span>
               <span className="text-[11px] text-amber-200">★</span>
             </button>
@@ -235,7 +235,7 @@ export const MainMenu: React.FC = () => {
 
         <div className="text-[11px] text-[#8f816c] space-y-1">
           <p>Khuyến nghị đeo tai nghe để trải nghiệm âm thanh 3D HRTF kinh dị tâm lý.</p>
-          <p className="text-[#6b6050]">HỒN ÁN v4.0 – CINEMATIC HORROR EDITION • 5 Vụ Án • 3 Kết Cục • New Game+</p>
+          <p className="text-[#6b6050]">HỒN ÁN v6.0 – HỒ SƠ ĐỒI SƯƠNG (2004) • Map 60×60m • 4 Kết Cục • Ẩn Nấp & Nhang Trầm</p>
         </div>
       </div>
 

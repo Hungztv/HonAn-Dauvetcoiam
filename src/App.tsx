@@ -78,7 +78,7 @@ export function App() {
       {/* Main 3D First-Person World Canvas with Unity-style ACES Filmic Tone Mapping & Post-FX */}
       <Canvas
         shadows={qualityProfile.shadowsEnabled}
-        camera={{ fov: 68, near: 0.1, far: 85 }}
+        camera={{ fov: 68, near: 0.1, far: 145 }}
         dpr={[Math.min(0.85, effectiveDpr), effectiveDpr]}
         gl={{
           antialias: settings.graphicsQuality !== 'low',

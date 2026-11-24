@@ -256,111 +256,117 @@ const AncientBanyanCanopy: React.FC<{ position: Vec3 }> = ({ position }) => {
   );
 };
 
-/** Detailed Ferryboat curved canopy ribs, prow finial & hanging lanterns for Level 5 */
+/** Detailed Ferryboat canopy ribs, bow searchlight & yellow phone booth on Dam Road for Level 5 (64x64m) */
 const FerryboatDetails: React.FC = () => {
-  const woodMat = useMemo(() => getWorldMaterial('wood_dark'), []);
+  const woodMat = useMemo(() => getWorldMaterial('metal'), []);
   return (
-    <group position={[0, 0.1, -7.8]}>
-      {[-1.8, -0.6, 0.6, 1.8].map((z, idx) => (
-        <mesh key={idx} position={[0, 2.2, z]} material={woodMat}>
-          <torusGeometry args={[2.45, 0.06, 8, 20, Math.PI]} />
+    <group>
+      {/* Steel Ferry Canopy Ribs centered on the moored ferry at [0, 0.1, -19.0] */}
+      <group position={[0, 0.1, -19.0]}>
+        {[-4.2, -1.4, 1.4, 4.2].map((z, idx) => (
+          <mesh key={idx} position={[0, 2.5, z]} material={woodMat}>
+            <torusGeometry args={[4.4, 0.08, 8, 20, Math.PI]} />
+          </mesh>
+        ))}
+        <mesh position={[0, 2.3, -6.2]}>
+          <sphereGeometry args={[0.24, 12, 12]} />
+          <meshStandardMaterial color="#fbbf24" emissive="#f59e0b" emissiveIntensity={3.4} />
         </mesh>
-      ))}
-      <mesh position={[2.25, 0.95, 1.2]} rotation={[0.25, 0, -0.15]} material={woodMat}>
-        <cylinderGeometry args={[0.045, 0.055, 4.6, 8]} />
-      </mesh>
-      <mesh position={[0, 1.95, -3.5]}>
-        <sphereGeometry args={[0.2, 12, 12]} />
-        <meshStandardMaterial color="#fbbf24" emissive="#f59e0b" emissiveIntensity={3.2} />
-      </mesh>
+      </group>
+      {/* Iconic 2000s Yellow Public Phone Booth Frame at [-6.5, 0, 20.5] */}
+      <group position={[-6.5, 0, 20.5]}>
+        <mesh position={[0, 2.25, 0]}>
+          <boxGeometry args={[1.35, 0.22, 1.35]} />
+          <meshStandardMaterial color="#eab308" emissive="#ca8a04" emissiveIntensity={0.45} roughness={0.5} />
+        </mesh>
+      </group>
     </group>
   );
 };
 
-/** Renders Unity-grade handcrafted Vietnamese architectural & atmospheric setpieces per level */
+/** Renders handcrafted 2000s Vietnamese atmospheric setpieces across the 56x56m - 64x64m maps */
 export const VietnameseLevelSetpieces: React.FC<{ levelId: number }> = ({ levelId }) => {
   return (
     <group>
-      {levelId === 1 && <Level1HouseBenchmark />}
+      {levelId === 1 && (
+        <>
+          <IncenseSmoke position={[0, 1.28, 2.5]} />
+          <InstancedRain area={54} height={12} />
+          <GroundMist color="#7a8b99" opacity={0.22} y={0.25} spread={48} />
+          <NightMoon position={[-22, 28, -42]} color="#dce7f5" />
+        </>
+      )}
 
       {levelId === 2 && (
         <>
-          <AltarCalligraphySet
-            position={[0, 0.55, -9.9]}
-            title="LINH MIẾU CÔ ĐỎ"
-            leftCouplet="ÁO ĐỎ RỪNG TRE SƯƠNG LẠNH BUỐT"
-            rightCouplet="OAN HỒN LỆ RƠI ĐỢI GIẢI OAN"
-            width={4.0}
-          />
-          <WoodenRoofTrusses zPositions={[-8.8, -5.2, -2.2]} spanWidth={10} height={3.55} />
-          <AncientBanyanCanopy position={[-6.8, 0, 2.8]} />
+          <AncientBanyanCanopy position={[-6.2, 0, 14.5]} />
           <SwayingBambooGrove
             positions={[
-              [-9.2, 0, -2.5],
-              [-8.0, 0, 5.8],
-              [-4.5, 0, 7.2],
-              [7.2, 0, 1.5],
-              [6.2, 0, 5.5],
-              [8.8, 0, -2.8],
-              [4.8, 0, 8.2],
-              [-7.5, 0, -7.2],
-              [7.5, 0, -7.2],
-              [-10.2, 0, 1.8],
-              [9.8, 0, 3.2],
+              [-26, 0, 10],
+              [-24, 0, -14],
+              [26, 0, 10],
+              [24, 0, -14],
+              [-15, 0, 26],
+              [15, 0, 26],
+              [-16, 0, -24],
+              [16, 0, -24],
             ]}
           />
-          <GroundMist color="#a37a7d" opacity={0.26} y={0.32} spread={16} />
-          <NightMoon position={[-14, 18, -26]} color="#f0d5d5" />
+          <InstancedRain area={58} height={12} />
+          <GroundMist color="#a37a82" opacity={0.25} y={0.3} spread={52} />
+          <NightMoon position={[-18, 28, -44]} color="#f0d5d8" />
         </>
       )}
 
       {levelId === 3 && (
         <>
-          <SculptedStoneWell position={[0, 0, 0]} radius={1.58} showBasket />
+          <SculptedStoneWell position={[0, 0, 0]} radius={1.65} showBasket />
           <SwayingBambooGrove
             positions={[
-              [-11.2, 0, 7.2],
-              [11.0, 0, 7.5],
-              [-10.8, 0, -8.2],
-              [10.8, 0, -8.2],
+              [-12, 0, 14],
+              [12, 0, 14],
+              [-12, 0, 24],
+              [12, 0, 24],
+              [-28, 0, -12],
+              [28, 0, -12],
             ]}
           />
-          <InstancedRain area={26} height={10} />
-          <GroundMist color="#7e949c" opacity={0.28} y={0.28} spread={18} />
-          <NightMoon position={[18, 22, -24]} />
+          <InstancedRain area={60} height={12} />
+          <GroundMist color="#7e949c" opacity={0.28} y={0.28} spread={54} />
+          <NightMoon position={[22, 30, -45]} />
         </>
       )}
 
       {levelId === 4 && (
         <>
           <AltarCalligraphySet
-            position={[0, 0.65, -10.8]}
-            title="THÀNH HOÀNG BẢO HỘ"
-            leftCouplet="ĐÌNH CỔ NỬA ĐÊM CHUÔNG TRỐNG VỌNG"
-            rightCouplet="SẮC PHONG GHI TẠC CHÍNH KHÍ TRỜI"
-            width={4.6}
+            position={[0, 1.1, -13.6]}
+            title="RẠP CHIẾU BÓNG LÂM VIÊN"
+            leftCouplet="ÁNH ĐÈN MÀN BẠC PHAI NĂM THÁNG"
+            rightCouplet="SÓNG NGẦM ĐỒI BẮC GIỮ CHÂN TƯỚNG"
+            width={5.4}
           />
-          <WoodenRoofTrusses zPositions={[-8.8, -4.2, 0.0, 4.5, 8.0]} spanWidth={22} height={4.6} />
-          <IncenseSmoke position={[0, 1.25, -3.5]} />
-          <GroundMist color="#9c8a78" opacity={0.18} y={0.22} spread={15} />
+          <WoodenRoofTrusses zPositions={[-11.5, -5.5, 0.5, 6.5, 11.0]} spanWidth={34} height={4.8} />
+          <GroundMist color="#9c8a78" opacity={0.2} y={0.24} spread={48} />
+          <NightMoon position={[0, 30, 46]} color="#e2dcd3" />
         </>
       )}
 
       {levelId === 5 && (
         <>
-          <AnimatedWater position={[0, -0.22, -5.2]} size={[34, 24]} tint="#061217" />
+          <AnimatedWater position={[0, -0.24, -10.5]} size={[66, 44]} tint="#051117" />
           <FerryboatDetails />
           <SwayingBambooGrove
             positions={[
-              [-8.2, 0, 6.2],
-              [-6.2, 0, 7.8],
-              [7.8, 0, 6.0],
-              [6.0, 0, 7.6],
+              [-28, 0, 24],
+              [-24, 0, 28],
+              [28, 0, 24],
+              [24, 0, 28],
             ]}
           />
-          <InstancedRain area={24} height={9} />
-          <GroundMist color="#8ca5b2" opacity={0.34} y={0.35} spread={18} />
-          <NightMoon position={[0, 15, -32]} color="#dce8f5" />
+          <InstancedRain area={62} height={13} />
+          <GroundMist color="#8ca5b2" opacity={0.34} y={0.35} spread={56} />
+          <NightMoon position={[0, 26, -48]} color="#dce8f5" />
         </>
       )}
     </group>

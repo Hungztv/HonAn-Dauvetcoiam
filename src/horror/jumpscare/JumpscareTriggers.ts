@@ -12,7 +12,6 @@ export interface JumpscareTriggerVolume {
   caption: string;
   /** Checks whether player position is inside this trigger volume */
   test: (playerPos: Vec3, narrative: NarrativeState) => boolean;
-  /** Optional fixed dramatic anchor (e.g., child spirit at well center); otherwise spawned safely ahead/behind player */
   fixedWorldPosition?: Vec3;
   preferredDistance?: number;
   animationClip?: NPCAnimationClipName;
@@ -20,14 +19,14 @@ export interface JumpscareTriggerVolume {
 }
 
 export const LEVEL_JUMPSCARE_TRIGGERS: JumpscareTriggerVolume[] = [
-  // LEVEL 1 — Trần Thị Liên (backyard well approach & floor-crawling reveal inside East Room)
+  // LEVEL 1 — Y tá Nguyễn Thu Hà (Sân phơi Bắc & bò dưới sàn Phòng 404)
   {
     key: 'l1_well_scare',
     levelId: 1,
     npcType: 'tran_thi_lien',
     jumpscareType: 'C_CORNER_AMBUSH',
-    caption: '“CON ƠI... ĐỪNG LẠI GẦN GIẾNG!”',
-    test: ([px, , pz]) => pz > 5.8 && Math.abs(px) < 2.6,
+    caption: '“ĐỪNG TIN TỜ GIẤY ĐÒI NỢ... CHÚNG TRÁT KÍN TÔI TRONG TƯỜNG!”',
+    test: ([px, , pz]) => pz < -21.0 && Math.abs(px) < 6.0,
     preferredDistance: 1.75,
     animationClip: 'ReachForward',
   },
@@ -36,22 +35,22 @@ export const LEVEL_JUMPSCARE_TRIGGERS: JumpscareTriggerVolume[] = [
     levelId: 1,
     npcType: 'tran_thi_lien',
     jumpscareType: 'D_SURFACE_REVEAL',
-    caption: '“AI DÁM XÉ BÙA BUỒNG ĐÔNG 1988?!”',
-    test: ([px, , pz]) => px > 4.2 && pz < 1.5,
+    caption: '“PHÒNG 404... CỨU TÔI RA KHỎI VÁCH VÔI NÀY!”',
+    test: ([px, , pz]) => px > 8.5 && pz < -9.5,
     preferredDistance: 1.65,
     animationClip: 'Crawling',
     crawling: true,
   },
 
-  // LEVEL 2 — Đào Thị Mây (Banyan tree SlowHeadRaise & Hậu Cung Behind-Player Reveal — suppressed if 'release')
+  // LEVEL 2 — Nữ sinh Lâm Hạ Vy (Gốc phượng già & Phòng Phát Thanh — tắt nếu chọn 'release')
   {
     key: 'l2_banyan_scare',
     levelId: 2,
     npcType: 'dao_thi_may',
     jumpscareType: 'E_SUDDEN_APPROACH',
-    caption: '“ÁO ĐỎ ĐÂY RỒI... KIỆU HOA ĐÂU?!”',
+    caption: '“ANH QUÂN ƠI... THƯ TUYỆT MỆNH ĐÓ KHÔNG PHẢI EM VIẾT!”',
     test: ([px, , pz], narrative) =>
-      narrative.moralChoices.fate_dao_thi_may !== 'release' && px < -3.5 && pz > 0.8 && pz < 4.8,
+      narrative.moralChoices.fate_dao_thi_may !== 'release' && px < -2.5 && pz > 10.5 && pz < 18.0,
     preferredDistance: 1.75,
     animationClip: 'SlowHeadRaise',
   },
@@ -60,21 +59,21 @@ export const LEVEL_JUMPSCARE_TRIGGERS: JumpscareTriggerVolume[] = [
     levelId: 2,
     npcType: 'dao_thi_may',
     jumpscareType: 'A_BEHIND_PLAYER',
-    caption: '“TRẢ LẠI TÊN CHO ĐÀO THỊ MÂY!”',
+    caption: '“SAO ĐÊM ĐÓ CỬA SÂN THƯỢNG LẠI KHÓA TRÁI?!”',
     test: ([, , pz], narrative) =>
-      narrative.moralChoices.fate_dao_thi_may !== 'release' && pz < -6.8,
+      narrative.moralChoices.fate_dao_thi_may !== 'release' && pz < -17.5,
     preferredDistance: 1.65,
     animationClip: 'Lunge',
   },
 
-  // LEVEL 3 — Hồn Đứa Trẻ Dưới Giếng (rises at well rim) + Headman's Hut
+  // LEVEL 3 — Bệnh nhi số 07 Bé Minh (trồi lên từ Bể Nước Ngầm [0,0,0]) + Khu Cách Ly B3
   {
     key: 'l3_well_scare',
     levelId: 3,
     npcType: 'child_spirit',
     jumpscareType: 'H_WATER_EMERGENCE',
-    caption: '“18/08/1978... SAO CHỈ KÉO MỘT GIỎ LÊN?!”',
-    test: ([px, , pz]) => Math.hypot(px, pz) < 3.0,
+    caption: '“ANH B3-09 ƠI... DƯỚI ĐÁY BỂ LẠNH LẮM!”',
+    test: ([px, , pz]) => Math.hypot(px, pz) < 3.4,
     fixedWorldPosition: [0.0, 0.4, 0.0],
     animationClip: 'WaterRise',
   },
@@ -83,20 +82,20 @@ export const LEVEL_JUMPSCARE_TRIGGERS: JumpscareTriggerVolume[] = [
     levelId: 3,
     npcType: 'tran_thi_lien',
     jumpscareType: 'F_LIGHT_TRIGGER',
-    caption: '“NGƯƠI BIẾT HUYẾT THỐNG CỦA MÌNH RỒI SAO?!”',
-    test: ([px, , pz]) => pz < -6.3 && Math.abs(px) < 3.5,
+    caption: '“ANH NHỚ LẠI CÁI ĐÊM Ở KHU B3 RỒI PHẢI KHÔNG?!”',
+    test: ([px, , pz]) => pz < -14.5 && Math.abs(px) < 5.0,
     preferredDistance: 1.7,
     animationClip: 'Lunge',
   },
 
-  // LEVEL 4 — Bốn Tượng Quan Gỗ (sudden pose when approaching or entering Hậu Cung) + May ambush if 'keep'
+  // LEVEL 4 — 4 Hình Nhân Rạp Chiếu Bóng + Hạ Vy phục kích nếu chọn 'keep'
   {
     key: 'l4_statue_scare',
     levelId: 4,
     npcType: 'wooden_statue',
     jumpscareType: 'G_STATUE_MOVEMENT',
-    caption: '“ĐỪNG QUAY LƯNG LẠI VỚI CHÚNG TA!”',
-    test: ([px, , pz]) => Math.abs(px) > 5.2 && pz < 5.5 && pz > -4.0,
+    caption: '“ĐỪNG TẮT ĐÈN PIN TRONG KHÁN PHÒNG!”',
+    test: ([px, , pz]) => Math.abs(px) > 10.5 && pz < 9.5 && pz > -10.0,
     preferredDistance: 1.85,
     animationClip: 'ReachForward',
   },
@@ -105,8 +104,8 @@ export const LEVEL_JUMPSCARE_TRIGGERS: JumpscareTriggerVolume[] = [
     levelId: 4,
     npcType: 'wooden_statue',
     jumpscareType: 'G_STATUE_MOVEMENT',
-    caption: '“SẮC PHONG 1958 ĐÃ BỊ TRÁO!”',
-    test: ([, , pz]) => pz < -7.2,
+    caption: '“MÁY PHÁT 19Hz VẪN ĐANG CHẠY!”',
+    test: ([, , pz]) => pz < -16.5,
     preferredDistance: 1.85,
     animationClip: 'Lunge',
   },
@@ -115,21 +114,21 @@ export const LEVEL_JUMPSCARE_TRIGGERS: JumpscareTriggerVolume[] = [
     levelId: 4,
     npcType: 'dao_thi_may',
     jumpscareType: 'A_BEHIND_PLAYER',
-    caption: '“NGƯƠI GIỮ TA LẠI... TA SẼ KHÔNG BUÔNG THA!”',
+    caption: '“ANH LỢI DỤNG NỖI ĐAU CỦA EM... EM SẼ KHÔNG DỪNG LẠI!”',
     test: ([px, , pz], narrative) =>
-      narrative.moralChoices.fate_dao_thi_may === 'keep' && pz < -2.0 && Math.abs(px) < 3.0,
+      narrative.moralChoices.fate_dao_thi_may === 'keep' && pz < -6.5 && Math.abs(px) < 4.5,
     preferredDistance: 1.65,
     animationClip: 'JumpscareAttack',
   },
 
-  // LEVEL 5 — Hành Khách Không Mặt on Ferryboat + May ambush if 'keep'
+  // LEVEL 5 — 4 Bóng Người Trên Phà Sắt + Hạ Vy phục kích nếu chọn 'keep'
   {
     key: 'l5_boat_scare',
     levelId: 5,
     npcType: 'faceless_passenger',
     jumpscareType: 'B_CORRIDOR_REVEAL',
-    caption: '“ĐÒ NHỔ SÀO RỒI... HÃY PHÁN QUYẾT ĐI!”',
-    test: ([, , pz]) => pz < -4.8,
+    caption: '“TRỜI SẮP SÁNG RỒI... HÃY ĐỐI DIỆN SỰ THẬT ĐI!”',
+    test: ([, , pz]) => pz < -12.5,
     preferredDistance: 1.9,
     animationClip: 'StandUp',
   },
@@ -138,9 +137,9 @@ export const LEVEL_JUMPSCARE_TRIGGERS: JumpscareTriggerVolume[] = [
     levelId: 5,
     npcType: 'dao_thi_may',
     jumpscareType: 'E_SUDDEN_APPROACH',
-    caption: '“OÁN NIỆM CỦA TA THEO NGƯƠI TỚI TẬN BẾN ĐÒ!”',
-    test: ([px, , pz], narrative) =>
-      narrative.moralChoices.fate_dao_thi_may === 'keep' && pz < 1.5 && pz > -2.5,
+    caption: '“OÁN NIỆM CỦA EM THEO ANH RA TẬN BẾN PHÀ ĐẬP NƯỚC!”',
+    test: ([, , pz], narrative) =>
+      narrative.moralChoices.fate_dao_thi_may === 'keep' && pz < 6.5 && pz > -6.5,
     preferredDistance: 1.65,
     animationClip: 'JumpscareAttack',
   },

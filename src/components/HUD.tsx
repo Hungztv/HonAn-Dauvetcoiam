@@ -1,8 +1,9 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Flashlight, BookOpen, Backpack, Pause, MousePointerClick, AlertCircle } from 'lucide-react';
+import { Flashlight, BookOpen, Backpack, Pause, MousePointerClick, AlertCircle, Flame, EyeOff, Map as MapIcon } from 'lucide-react';
 import { LevelData } from '../types/game';
 import { useGameStore } from '../store/gameStore';
+import { FieldMap } from './FieldMap';
 
 interface HUDProps {
   level: LevelData;
@@ -16,6 +17,10 @@ export const HUD: React.FC<HUDProps> = ({ level, onRequestLock }) => {
   const flashlightOn = useGameStore((s) => s.flashlightOn);
   const flashlightBattery = useGameStore((s) => s.flashlightBattery);
   const isCrouching = useGameStore((s) => s.isCrouching);
+  const activeHidingSpotId = useGameStore((s) => s.activeHidingSpotId);
+  const incenseCharges = useGameStore((s) => s.incenseCharges);
+  const useIncenseWard = useGameStore((s) => s.useIncenseWard);
+  const setJournalTab = useGameStore((s) => s.setJournalTab);
   const horrorIntensity = useGameStore((s) => s.horrorIntensity);
   const supernaturalGlitch = useGameStore((s) => s.supernaturalGlitch);
   const activeWhisper = useGameStore((s) => s.activeWhisper);
@@ -114,6 +119,24 @@ export const HUD: React.FC<HUDProps> = ({ level, onRequestLock }) => {
 
         <div className="pointer-events-auto flex items-center gap-1.5">
           <button
+            onClick={() => useIncenseWard()}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-black/60 hover:bg-amber-950/80 border border-amber-700/60 text-[11px] text-amber-200 cursor-pointer"
+            title="Đốt Nhang Trầm Hộ Mệnh đẩy lùi ma trong 15m (Phím Q)"
+          >
+            <Flame className="w-3.5 h-3.5 text-amber-400" />
+            Trầm (Q): {incenseCharges}
+          </button>
+          <button
+            onClick={() => {
+              setJournalTab('map');
+              setOverlay('journal');
+            }}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-black/60 hover:bg-red-950/75 border border-[#523925]/70 text-[11px] text-[#e5dac2] cursor-pointer"
+          >
+            <MapIcon className="w-3.5 h-3.5 text-sky-400" />
+            Bản đồ
+          </button>
+          <button
             onClick={() => setOverlay('journal')}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-black/60 hover:bg-red-950/75 border border-[#523925]/70 text-[11px] text-[#e5dac2] cursor-pointer"
           >
@@ -207,8 +230,17 @@ export const HUD: React.FC<HUDProps> = ({ level, onRequestLock }) => {
         )}
       </AnimatePresence>
 
-      {/* Bottom Left: Toast Notifications */}
-      <div className="absolute bottom-14 left-5 space-y-2 max-w-sm">
+      {/* Stealth Hiding Vignette Slit Indicator */}
+      {activeHidingSpotId && overlay === 'none' && (
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-sky-950/85 border border-sky-500/60 text-sky-200 text-xs flex items-center gap-2 shadow-lg">
+          <EyeOff className="w-3.5 h-3.5 text-sky-300" />
+          <span>Đang ẩn nấp & nín thở — Nhấn [E] để bước ra ngoài</span>
+        </div>
+      )}
+
+      {/* Bottom Left: Live Architectural Minimap + Toast Notifications */}
+      <div className="absolute bottom-14 left-5 space-y-2.5 max-w-sm">
+        {overlay === 'none' && settings.showMinimap && <FieldMap level={level} compact />}
         <AnimatePresence>
           {notifications.map((n) => (
             <motion.div
@@ -240,11 +272,12 @@ export const HUD: React.FC<HUDProps> = ({ level, onRequestLock }) => {
       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-3 px-4 py-1.5 rounded bg-black/50 border border-[#3d2b1d]/60 text-[10px] text-[#a89a82] whitespace-nowrap">
         <span>[WASD] Đi</span>
         <span>[Shift] Chạy</span>
-        <span className={isCrouching ? 'text-amber-300 font-semibold' : ''}>[C / Ctrl] Ngồi</span>
+        <span className={isCrouching ? 'text-amber-300 font-semibold' : ''}>[C] Ngồi</span>
         <span>[F] Đèn pin</span>
-        <span>[E] Kiểm tra</span>
+        <span className="text-amber-200/90">[Q] Nhang trầm ({incenseCharges})</span>
+        <span>[E] Tương tác / Nấp</span>
+        <span>[M] Minimap</span>
         <span>[Tab] Sổ điều tra</span>
-        <span>[I] Túi đồ</span>
         <span>[ESC] Tạm dừng</span>
       </div>
     </div>

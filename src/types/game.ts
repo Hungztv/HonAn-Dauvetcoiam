@@ -21,9 +21,15 @@ export type EvidenceModelType =
   | 'rope'
   | 'ledger';
 
-export type ImportanceLevel = 'quan_trong' | 'then_chot' | 'bo_tro';
+export type ImportanceLevel = 'quan_trong' | 'then_chot' | 'bo_tro' | 'nhieu_gia' | 'mat_vat';
 
 export type GraphicsPreset = 'low' | 'medium' | 'high' | 'ultra';
+
+export type SecretRelicId =
+  | 'relic_l1_cassette'
+  | 'relic_l2_badge'
+  | 'relic_l3_wristband'
+  | 'relic_l4_film_reel';
 
 export interface EvidenceHotspot {
   id: string;
@@ -55,6 +61,10 @@ export interface EvidenceItem {
   requiresTier?: 1 | 2 | 3;
   hotspots: EvidenceHotspot[];
   initialClueId?: string;
+  /** True if this item was planted/forged to mislead investigators (Red Herring) */
+  isRedHerring?: boolean;
+  /** Unlocks one of the 4 hidden Secret Relics (for the 4th Secret Ending) + grants +1 Incense Ward */
+  unlocksSecretRelicId?: SecretRelicId;
 }
 
 export interface Clue {
@@ -66,6 +76,8 @@ export interface Clue {
   tier: 1 | 2 | 3;
   boardX: number;
   boardY: number;
+  /** Marks forged/unreliable testimony so attentive players can spot contradictions */
+  isRedHerring?: boolean;
 }
 
 export interface Suspect {
@@ -233,6 +245,24 @@ export interface PuzzleStation {
   visualType: 'altar_seal' | 'shrine_tablet' | 'well_winch' | 'festival_drum' | 'ferry_chest' | 'truth_altar';
 }
 
+export interface HidingSpot {
+  id: string;
+  name: string;
+  position: Vec3;
+  rotationY?: number;
+  /** Safe exit position when stepping out of hiding */
+  exitPosition: Vec3;
+  visualType: 'locker' | 'curtain_booth' | 'under_stairs';
+}
+
+export interface MapZoneLabel {
+  id: string;
+  name: string;
+  x: number;
+  z: number;
+  isSecret?: boolean;
+}
+
 export interface SurfaceZone {
   minX: number;
   maxX: number;
@@ -280,6 +310,8 @@ export interface LevelData {
   spawnYaw: number;
   bounds: { minX: number; maxX: number; minZ: number; maxZ: number };
   surfaceZones: SurfaceZone[];
+  mapZones?: MapZoneLabel[];
+  hidingSpots?: HidingSpot[];
   tiers: [TierMeta, TierMeta, TierMeta];
   tier1RequiredClues: number;
   tier2RequiredConnections?: string[];
@@ -321,10 +353,11 @@ export interface GameSettings {
   showHints: boolean;
   enableJumpscares: boolean;
   showPerfStats: boolean;
+  showMinimap: boolean;
 }
 
 export interface TargetInteractable {
-  kind: 'evidence' | 'door' | 'puzzle';
+  kind: 'evidence' | 'door' | 'puzzle' | 'hiding_spot';
   id: string;
   name: string;
   actionLabel: string;

@@ -649,16 +649,67 @@ export const LevelEnvironment: React.FC<LevelEnvironmentProps> = ({ level }) => 
       {/* Unity-grade sculpted Vietnamese architectural setpieces, animated water, incense smoke & ground mist */}
       <VietnameseLevelSetpieces levelId={level.id} />
 
-      {/* Atmospheric floating dust / incense ash / river mist particles */}
+      {/* Atmospheric floating dust / incense ash / river mist particles across 60x60m maps */}
       <Sparkles
         count={qualityProfile.sparkleCount}
-        scale={[26, 5, 26]}
-        position={[0, 2.2, 0]}
-        size={1.8}
+        scale={[58, 6, 58]}
+        position={[0, 2.4, 0]}
+        size={1.9}
         speed={0.25}
         opacity={0.32}
         color={level.id === 2 ? '#c47676' : level.id === 5 ? '#9ab7c4' : '#d1bf97'}
       />
+
+      {/* Interactive 2000s Hiding Spots (Steel Lockers, Medical Curtain Booths, Under-Stair Alcoves) */}
+      {level.hidingSpots?.map((spot) => {
+        const isTargeted = targeted?.kind === 'hiding_spot' && targeted.id === spot.id;
+        return (
+          <group
+            key={spot.id}
+            position={spot.position}
+            rotation={[0, spot.rotationY ?? 0, 0]}
+          >
+            {spot.visualType === 'curtain_booth' ? (
+              <group>
+                <mesh position={[0, 1.15, 0]} castShadow>
+                  <cylinderGeometry args={[0.62, 0.62, 2.3, 12, 1, true, 0, Math.PI * 1.65]} />
+                  <meshStandardMaterial color="#27423b" roughness={0.9} side={THREE.DoubleSide} />
+                </mesh>
+                <mesh position={[0, 2.3, 0]}>
+                  <torusGeometry args={[0.62, 0.025, 6, 18]} />
+                  <meshStandardMaterial color="#94a3b8" metalness={0.7} roughness={0.3} />
+                </mesh>
+              </group>
+            ) : spot.visualType === 'under_stairs' ? (
+              <group>
+                <mesh position={[0, 1.0, -0.35]} castShadow>
+                  <boxGeometry args={[1.5, 2.0, 0.9]} />
+                  <meshStandardMaterial color="#1f1b18" roughness={0.95} />
+                </mesh>
+              </group>
+            ) : (
+              <group>
+                {/* 2000s Industrial Steel Locker with Louvered Vents */}
+                <mesh position={[0, 1.05, 0]} castShadow receiveShadow>
+                  <boxGeometry args={[0.92, 2.1, 0.78]} />
+                  <meshStandardMaterial color="#33414d" metalness={0.55} roughness={0.52} />
+                </mesh>
+                <mesh position={[0, 1.45, 0.4]}>
+                  <boxGeometry args={[0.65, 0.28, 0.02]} />
+                  <meshStandardMaterial color="#161e24" roughness={0.8} />
+                </mesh>
+                <mesh position={[0.3, 1.05, 0.41]}>
+                  <boxGeometry args={[0.05, 0.18, 0.04]} />
+                  <meshStandardMaterial color="#cbd5e1" metalness={0.8} roughness={0.25} />
+                </mesh>
+              </group>
+            )}
+            {isTargeted && (
+              <pointLight position={[0, 1.5, 0.6]} color="#38bdf8" intensity={1.8} distance={2.4} />
+            )}
+          </group>
+        );
+      })}
 
       {/* World architectural boxes */}
       {level.boxes.map((box) => {
